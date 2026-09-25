@@ -32,38 +32,54 @@ export const Header: React.FC<HeaderProps> = ({
   const strings = UI_STRINGS[currentLanguage] || UI_STRINGS.en;
   const currentLangObj = LANGUAGES.find((l) => l.code === currentLanguage) || LANGUAGES[0];
 
-  const navItems: { id: ScreenType; label: string; icon: string; badge?: string }[] = [
-    { id: 'gateway', label: strings.navGateway, icon: 'account_circle' },
-    { id: 'khata', label: strings.navKhata || 'Dukandar Khata', icon: 'menu_book', badge: 'LEDGER' },
-    { id: 'feasibility', label: strings.navFeasibility, icon: 'assessment', badge: '92% AAA' },
-    { id: 'calculator', label: strings.navCalculator, icon: 'calculate', badge: '1:10 Leverage' },
-    { id: 'cluster-map', label: strings.navClusterMap, icon: 'map', badge: 'GIS LGD' },
-    { id: 'loan-simulator', label: strings.navSimulator, icon: 'monitoring', badge: '6M Grace' },
+  const isHindi = currentLanguage === 'hi';
+
+  // Exactly 3 clean, streamlined navigation modules as requested by user
+  const navItems: { id: ScreenType; label: string; icon: string; badge: string; sub: string }[] = [
+    {
+      id: 'gateway',
+      label: isHindi ? '1. बिज़नेस सेटअप व मैप गाइड' : '1. Business Setup & GPS Guide',
+      icon: 'explore',
+      badge: isHindi ? 'सेटअप & मैप' : 'SETUP & MAP',
+      sub: isHindi ? 'लाइव लोकेशन व पिनकोड गाइड' : 'Live GPS & Local Guide',
+    },
+    {
+      id: 'calculator',
+      label: isHindi ? '2. लोन, सब्सिडी व बैंक प्लानर' : '2. Loans, Subsidies & Bank Rates',
+      icon: 'account_balance',
+      badge: isHindi ? 'सब्सिडी & बैंक' : 'LOANS & SUBSIDY',
+      sub: isHindi ? 'HDFC, ICICI, SBI व EMI हेल्पर' : 'Bank Offers, EMI & Profit',
+    },
+    {
+      id: 'khata',
+      label: isHindi ? '3. दुकान खाता (हिसाब-किताब)' : '3. Shop Bahi-Khata',
+      icon: 'menu_book',
+      badge: isHindi ? 'बही-खाता' : 'BAHI-KHATA',
+      sub: isHindi ? 'ग्राहक उधारी व नकद हिसाब' : 'Customer Credit & Cash Ledger',
+    },
   ];
 
   return (
     <header className="sticky top-0 z-40 bg-surface shadow-xs border-b border-surface-variant/70">
-      {/* Top Sovereign Bar with Tricolor accent */}
-      <div className="bg-[#0f1f12] text-white text-xs py-1.5 px-4 sm:px-8 flex flex-wrap justify-between items-center border-b-2 border-[#ff9933]">
+      {/* Top Community Bar */}
+      <div className="bg-[#142918] text-white text-xs py-1.5 px-4 sm:px-8 flex flex-wrap justify-between items-center border-b-2 border-emerald-500">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ff9933] inline-block"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>
-            <span className="w-2.5 h-2.5 rounded-full bg-[#138808] inline-block"></span>
-            <span className="font-bold tracking-wider uppercase text-[11px] ml-1 text-surface-variant">
-              {strings.sovereignHeader}
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+            <span className="font-bold tracking-wider text-[11px] ml-1 text-emerald-100">
+              GramMitra • {isHindi ? 'ग्रामीण व्यवसाय व डिजिटल सेवा पोर्टल' : 'Rural Business & Digital Guide Portal'}
             </span>
           </div>
           <span className="hidden md:inline text-white/40">|</span>
           <span className="hidden md:inline text-[11px] text-white/80">
-            NBCFDC & NSFDC Statutory Apex Corporations
+            {isHindi ? 'आसान भाषा में बिज़नेस सेटअप, लोन सब्सिडी व दुकान बही-खाता' : 'Simple Setup Guide, Bank Loan Comparison & Shop Khata'}
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-[11px]">
+        <div className="flex items-center gap-3 text-[11px]">
           <button
             onClick={onToggleHighContrast}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors cursor-pointer ${
               highContrast ? 'bg-primary-fixed text-primary font-bold' : 'hover:bg-white/10 text-white/80'
             }`}
             title="Toggle Accessibility High Contrast"
@@ -73,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={onOpenLanguageModal}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-white/10 hover:bg-white/20 transition-colors font-medium text-white border border-white/20"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-white/10 hover:bg-white/20 transition-colors font-medium text-white border border-white/20 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[14px]">translate</span>
             <span className="font-bold">{currentLangObj.nativeName}</span>
@@ -88,30 +104,28 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3.5">
           <button
             onClick={() => onNavigate('gateway')}
-            className="flex items-center gap-3 text-left group focus:outline-hidden"
+            className="flex items-center gap-3 text-left group focus:outline-hidden cursor-pointer"
           >
-            <img
-              src="https://lh3.googleusercontent.com/aida/AEtjO1WhmvW-T1ONNWhu04HxAPs05gskK5nIQf6ZOJu9-Ta3HGDG-FKlyLg9NeU6NIclBC0D4uIoy_ibNNVzcEQ1cNFCRcMk4If_8ik3PAl6isiJJ59N0pMTEojWxeik2kzd9PdVN01W1jQdkqqFbTKX_EHsMYcXenS4IVnb5NzhOvi0K5l3DEkIxd4vT1TR1QWXifV2Ueqiapd3ZV5bLvCC4zCLJjuAJnRcScf1AkKYerkhsQ_HIiD_BRmMVCg"
-              alt="GramMitra Sovereign Seal"
-              className="h-11 w-11 object-contain rounded-lg p-1 bg-white border border-surface-variant shadow-xs group-hover:scale-105 transition-transform"
-            />
+            <div className="h-11 w-11 rounded-xl bg-linear-to-br from-emerald-600 to-green-800 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-2xl">storefront</span>
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-headline-sm font-extrabold tracking-tight text-primary">
                   {strings.portalName}
                 </span>
-                <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide border border-primary/20">
-                  National Portal
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border border-emerald-300">
+                  {isHindi ? '3-इन-1 पोर्टल' : '3-in-1 Suite'}
                 </span>
               </div>
               <div className="text-xs text-outline font-medium tracking-tight">
-                {strings.portalSubtitle}
+                {isHindi ? 'सेटअप गाइड • लोन व सब्सिडी • दुकान खाता' : 'Setup Guide • Bank Loans & Subsidies • Shop Ledger'}
               </div>
             </div>
           </button>
         </div>
 
-        {/* Right Action Icons: Language Switcher, Bhashini Voice, Notification Bell, VLE User Desk */}
+        {/* Right Action Icons: Language Switcher, Voice, User Desk */}
         <div className="flex items-center gap-2.5">
           {/* Quick Language Switcher Dropdown */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-container-high hover:bg-surface-variant border border-outline-variant/70 text-xs text-on-surface shadow-2xs transition-colors">
@@ -133,11 +147,11 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenVoiceAssistant && (
             <button
               onClick={onOpenVoiceAssistant}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-high hover:bg-surface-variant border border-outline-variant/60 text-xs font-semibold text-on-surface transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-xs font-semibold text-emerald-900 transition-colors cursor-pointer"
               title="Voice Assistant"
             >
-              <span className="material-symbols-outlined text-primary text-base animate-pulse">mic</span>
-              <span className="hidden sm:inline">{strings.voiceSahayak}</span>
+              <span className="material-symbols-outlined text-emerald-700 text-base animate-pulse">mic</span>
+              <span className="hidden sm:inline">{isHindi ? 'आवाज से पूछें' : 'Voice Guide'}</span>
             </button>
           )}
 
@@ -145,56 +159,46 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg hover:bg-surface-container-high text-on-surface transition-colors focus:outline-hidden"
-              title="Portal Notifications"
+              className="relative p-2 rounded-lg hover:bg-surface-container-high text-on-surface transition-colors focus:outline-hidden cursor-pointer"
+              title="Notifications"
             >
               <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-white"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-white"></span>
             </button>
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-surface-variant p-3 z-50 animate-in fade-in">
                 <div className="flex items-center justify-between pb-2 border-b border-surface-variant">
-                  <span className="font-label-lg font-bold text-on-surface">Sovereign Alerts</span>
-                  <span className="text-[11px] text-primary font-bold">3 Unread</span>
+                  <span className="font-label-lg font-bold text-on-surface">
+                    {isHindi ? 'महत्वपूर्ण अपडेट्स' : 'Active Updates'}
+                  </span>
+                  <span className="text-[11px] text-emerald-700 font-bold">2 Active</span>
                 </div>
                 <div className="space-y-2.5 mt-2.5 text-xs">
-                  <div className="p-2 rounded-lg bg-primary/5 border border-primary/20">
-                    <div className="font-bold text-primary flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">verified</span>
-                      DPR Sanction Confirmed
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <div className="font-bold text-emerald-900 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs text-emerald-700">verified</span>
+                      {isHindi ? 'PMEGP 35% ग्रामीण सब्सिडी खुली है' : 'PMEGP 35% Rural Subsidy Open'}
                     </div>
-                    <div className="text-outline mt-0.5">
-                      Rampur Kalan Mini Solar Chilling Unit approved at 85% CGTMSE Sovereign Guarantee.
+                    <div className="text-emerald-800 mt-0.5">
+                      {isHindi ? 'ग्रामीण नए उद्यमों के लिए 35% तक सरकारी सब्सिडी मिल रही है।' : 'Up to 35% capital subsidy active for rural manufacturing & service units.'}
                     </div>
-                    <span className="text-[10px] text-outline mt-1 block">12 mins ago</span>
                   </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low border border-surface-variant">
+                  <div className="p-2.5 rounded-lg bg-surface-container-low border border-surface-variant">
                     <div className="font-bold text-on-surface flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs text-secondary">update</span>
-                      Q3 Harvest Subvention Credited
+                      <span className="material-symbols-outlined text-xs text-secondary">account_balance</span>
+                      {isHindi ? 'HDFC & ICICI बैंक Mudra लोन अपडेट' : 'HDFC & ICICI Mudra Rates Updated'}
                     </div>
                     <div className="text-outline mt-0.5">
-                      Direct DBT 3.0% interest subvention posted for 14 Gram Panchayat clusters.
+                      {isHindi ? '9.25% से शुरू - बिना किसी गारंटी के 10 लाख तक लोन।' : 'Rates starting 9.25% with zero collateral up to ₹10 Lakh.'}
                     </div>
-                    <span className="text-[10px] text-outline mt-1 block">2 hours ago</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-surface-container-low border border-surface-variant">
-                    <div className="font-bold text-on-surface flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs text-tertiary">warning</span>
-                      DIC Geo-Inspection Notice
-                    </div>
-                    <div className="text-outline mt-0.5">
-                      Field Inspector assigned to verify 5kW Off-Grid Solar backup array.
-                    </div>
-                    <span className="text-[10px] text-outline mt-1 block">Yesterday</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowNotifications(false)}
-                  className="w-full text-center text-xs text-primary font-bold pt-2 mt-2 border-t border-surface-variant hover:underline"
+                  className="w-full text-center text-xs text-primary font-bold pt-2 mt-2 border-t border-surface-variant hover:underline cursor-pointer"
                 >
-                  Close & Clear
+                  {isHindi ? 'बंद करें' : 'Close'}
                 </button>
               </div>
             )}
@@ -207,24 +211,20 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 p-1 rounded-xl hover:bg-surface-container-high transition-all text-left cursor-pointer focus:outline-hidden"
               >
-                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                   {currentUser.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="hidden sm:block text-xs">
                   <div className="font-bold text-on-surface flex items-center gap-1">
-                    <span className="truncate max-w-[120px]">{currentUser.name}</span>
+                    <span className="truncate max-w-[110px]">{currentUser.name}</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></span>
                   </div>
-                  <div className="text-[10px] text-outline font-mono truncate max-w-[120px]">
-                    {currentUser.citizenId}
+                  <div className="text-[10px] text-outline truncate max-w-[110px]">
+                    {currentUser.panchayat || 'Village Member'}
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-outline text-sm">
-                  {showUserMenu ? 'expand_less' : 'expand_more'}
-                </span>
               </button>
 
-              {/* Direct Quick Logout Button */}
               <button
                 onClick={onLogout}
                 className="p-1.5 rounded-lg border border-surface-variant hover:border-error hover:bg-error/10 text-outline hover:text-error transition-colors cursor-pointer"
@@ -232,51 +232,6 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <span className="material-symbols-outlined text-base">logout</span>
               </button>
-
-              {/* User Details Dropdown */}
-              {showUserMenu && (
-                <div className="absolute right-0 top-11 w-72 bg-white rounded-2xl shadow-xl border border-surface-variant p-4 z-50 animate-in fade-in space-y-3">
-                  <div className="pb-3 border-b border-surface-variant">
-                    <div className="font-bold text-sm text-on-surface">{currentUser.name}</div>
-                    <div className="text-xs text-outline font-mono">{currentUser.email}</div>
-                    <div className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                      {currentUser.role}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 text-xs text-outline">
-                    <div className="flex justify-between">
-                      <span>Citizen ID:</span>
-                      <span className="font-mono font-bold text-on-surface">{currentUser.citizenId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Gram Panchayat:</span>
-                      <span className="font-bold text-on-surface">{currentUser.panchayat}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>District & State:</span>
-                      <span className="text-on-surface">{currentUser.district}, {currentUser.state}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Session Started:</span>
-                      <span className="text-on-surface">{currentUser.loginTime}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-surface-variant">
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        onLogout();
-                      }}
-                      className="w-full py-2 px-3 rounded-xl bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-sm">logout</span>
-                      <span>Sign Out from Portal</span>
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <div className="pl-3 border-l border-surface-variant">
@@ -289,53 +244,53 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-base">login</span>
-                <span>Sign In</span>
+                <span>{isHindi ? 'लॉगिन' : 'Sign In'}</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Navigation Sub-bar */}
-      <nav className="border-t border-surface-variant/80 bg-surface-container-lowest overflow-x-auto scrollbar-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center gap-1 sm:gap-2">
-          {currentScreen === 'login' ? (
-            <div className="py-2 px-1 flex items-center gap-2 text-xs font-bold text-outline">
-              <span className="material-symbols-outlined text-base text-primary">lock</span>
-              <span>Sovereign Authentication Gateway • Enter Verified Temporary Credentials to Unlock Full System</span>
-            </div>
-          ) : (
-            navItems.map((item) => {
-              const isActive = currentScreen === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 font-label-lg whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+      {/* Navigation Bar - 3 Streamlined Tabs */}
+      <nav className="border-t border-surface-variant/80 bg-[#f8faf8] overflow-x-auto scrollbar-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-start gap-2 py-1">
+          {navItems.map((item) => {
+            const isActive =
+              currentScreen === item.id ||
+              (item.id === 'calculator' && (currentScreen === 'feasibility' || currentScreen === 'loan-simulator')) ||
+              (item.id === 'gateway' && currentScreen === 'cluster-map');
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border font-bold text-xs transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-emerald-800 text-white border-emerald-900 shadow-sm'
+                    : 'bg-white text-stone-700 hover:bg-emerald-50/70 border-stone-200 hover:border-emerald-300'
+                }`}
+              >
+                <span className={`material-symbols-outlined text-lg ${isActive ? 'text-white' : 'text-emerald-700'}`}>
+                  {item.icon}
+                </span>
+                <div className="text-left">
+                  <div className="font-bold leading-tight">{item.label}</div>
+                  <div className={`text-[10px] hidden sm:block ${isActive ? 'text-emerald-100' : 'text-stone-500'}`}>
+                    {item.sub}
+                  </div>
+                </div>
+                <span
+                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
                     isActive
-                      ? 'border-primary text-primary font-bold bg-primary/5'
-                      : 'border-transparent text-outline hover:text-on-surface hover:bg-surface-container-low'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-stone-100 text-stone-600'
                   }`}
                 >
-                  <span className={`material-symbols-outlined text-lg ${isActive ? 'text-primary' : 'text-outline'}`}>
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                        isActive
-                          ? 'bg-primary text-white'
-                          : 'bg-surface-container-high text-outline group-hover:text-on-surface'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })
-          )}
+                  {item.badge}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </header>

@@ -1,11 +1,11 @@
 export type ScreenType =
   | 'login'
   | 'gateway'
-  | 'feasibility'
   | 'calculator'
+  | 'khata'
+  | 'feasibility'
   | 'cluster-map'
-  | 'loan-simulator'
-  | 'khata';
+  | 'loan-simulator';
 
 export interface AuthUser {
   email: string;
@@ -41,3 +41,4 @@ export interface LanguageInfo {
 }
 
 export type GatewayRole = 'beneficiary' | 'vle' | 'sca' | 'dic' | 'central';
+

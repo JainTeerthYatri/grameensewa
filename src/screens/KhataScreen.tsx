@@ -3159,7 +3159,7 @@ export const KhataScreen: React.FC<KhataScreenProps> = ({
                     {t.shopLocation}
                   </div>
                   <div className="text-[10px] text-stone-500 font-mono">
-                    Proprietor: {t.defaultOwner} • Udyam: UDYAM-UP-28-0091823
+                    Proprietor: {t.defaultOwner}
                   </div>
                 </div>
 
@@ -3454,10 +3454,10 @@ export const KhataScreen: React.FC<KhataScreenProps> = ({
                   Working Capital Health
                 </span>
                 <div className="text-2xl font-black text-primary">
-                  1.84 DSCR
+                  Healthy Cash Flow
                 </div>
                 <div className="text-[11px] text-outline">
-                  Bankable Sovereign Profile (Eligible for NBCFDC 5% Loan)
+                  Consistent sales & customer collections
                 </div>
               </div>
             </div>

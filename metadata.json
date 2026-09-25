@@ -1,6 +1,6 @@
 {
   "name": "UdyamSetu.AI - National Concessional Credit Portal",
-  "description": "Unified sovereign public credit conduit and agritech moratorium modeler for grassroots rural enterprises across India, backed by NBCFDC, NSFDC, and MoSJE.",
+  "description": "Simple and easy village portal for Gram Panchayat citizens: Check government schemes, low-interest rural loans, shopkeeper ledger (khata), and village services in simple everyday English.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

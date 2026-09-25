@@ -25,8 +25,8 @@ export const ClusterMapScreen: React.FC<ClusterMapScreenProps> = ({
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const text = currentLanguage === 'en'
-          ? 'In the Rampur Kalan cluster, there are 1,840 milch cattle. Flour milling is 82% saturated, so avoid atta chakki loans. Dairy chilling is only 18% saturated, offering the best sovereign credit feasibility.'
-          : 'रामपुर कलां ग्राम क्लस्टर में 1,840 दुधारू पशु हैं। 82% आटा चक्की क्लस्टर संतृप्त है इसलिए आटा चक्की में ऋण न लें। डेयरी प्रसंस्करण केवल 18% संतृप्त है, जो इस क्षेत्र के लिए सर्वोत्तम और सुरक्षित अवसर है।';
+          ? 'In the Rampur Kalan area, there are many cows and buffaloes. There are already too many flour mills in the village, so milk collection is the best business opportunity to start here.'
+          : 'रामपुर कलां ग्राम क्लस्टर में 1,840 दुधारू पशु हैं। आटा चक्की क्लस्टर पहले से काफी भरा है इसलिए आटा चक्की में जोखिम है। डेयरी व दूध संग्रहण इस क्षेत्र के लिए सबसे अच्छा अवसर है।';
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = currentLanguage === 'en' ? 'en-IN' : 'hi-IN';
         utterance.onend = () => setIsPlayingGuide(false);
@@ -43,9 +43,9 @@ export const ClusterMapScreen: React.FC<ClusterMapScreenProps> = ({
   };
 
   const handleExportDossier = () => {
-    onShowToast('Exporting Gram Panchayat GIS Intelligence Dossier (PDF)...', 'info');
+    onShowToast('Downloading Village Business Guide (PDF)...', 'info');
     setTimeout(() => {
-      onShowToast('Village Cluster Dossier downloaded successfully!', 'success');
+      onShowToast('Village Business Guide downloaded successfully!', 'success');
     }, 1000);
   };
 
@@ -55,7 +55,7 @@ export const ClusterMapScreen: React.FC<ClusterMapScreenProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-surface-variant">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-outline mb-1">
-            <span>NIC LGD: 139420</span>
+            <span>VILLAGE MAP</span>
             <span>•</span>
             <span>UTTAR PRADESH</span>
             <span>•</span>
@@ -71,12 +71,12 @@ export const ClusterMapScreen: React.FC<ClusterMapScreenProps> = ({
           </p>
         </div>
 
-        {/* Live Geofence Radar Status */}
+        {/* Live Area Status */}
         <div className="flex items-center gap-2.5 bg-surface-container-high px-4 py-2 rounded-2xl border border-surface-variant">
           <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
           <div className="text-xs">
-            <span className="font-bold text-on-surface">PM GatiShakti Live Geofence</span>
-            <div className="text-[10px] text-outline font-mono">10km Sync • 120 SHG Points</div>
+            <span className="font-bold text-on-surface">Village Area Map Active</span>
+            <div className="text-[10px] text-outline font-mono">10km Radius • Nearby Centers</div>
           </div>
         </div>
       </div>

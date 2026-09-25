@@ -46,9 +46,9 @@ export const FeasibilityScreen: React.FC<FeasibilityScreenProps> = ({
   };
 
   const handleExportPdf = () => {
-    onShowToast('Compiling Statutory Bankable DPR for Rampur Kalan (PDF)...', 'info');
+    onShowToast('Preparing Business Plan & Loan Paper (PDF)...', 'info');
     setTimeout(() => {
-      onShowToast('Bankable DPR downloaded! Signed with NIC Sovereign Key.', 'success');
+      onShowToast('Business Plan and Loan Guide downloaded successfully!', 'success');
     }, 1200);
   };
 
@@ -69,7 +69,7 @@ export const FeasibilityScreen: React.FC<FeasibilityScreenProps> = ({
             <span>/</span>
             <span>MOHANLALGANJ</span>
             <span>/</span>
-            <span className="text-primary font-bold">RAMPUR KALAN (LGD: 139420)</span>
+            <span className="text-primary font-bold">RAMPUR KALAN VILLAGE AREA</span>
           </div>
           <h1 className="font-display-lg text-primary tracking-tight">
             {fText.title}
@@ -309,21 +309,21 @@ export const FeasibilityScreen: React.FC<FeasibilityScreenProps> = ({
           <div className="p-3.5 bg-surface-container-high rounded-xl border border-surface-variant text-xs flex items-center justify-between">
             <div>
               <span className="text-outline uppercase tracking-wider font-bold text-[10px]">
-                Selected GIS Coordinate
+                Selected Village Spot
               </span>
               <div className="font-bold text-on-surface mt-0.5">
-                {activeMapPin === 'hub' && 'Proposed Chilling Hub: GP Panchayat Bhawan Compound (Plot #42)'}
+                {activeMapPin === 'hub' && 'Proposed Milk Center: Near Village Panchayat Bhawan'}
                 {activeMapPin === 'kalyanpur' && 'Kalyanpur Milk Dock: 3.8 km distance, 22 Smallholder Families'}
                 {activeMapPin === 'bilaspur' && 'Bilaspur Mandi: Daily bulk purchase contract at ₹46/L'}
                 {activeMapPin === 'shg_south' && 'Rampur South Mahila SHG Network: 48 women milk pourers'}
-                {activeMapPin === 'substation' && 'Agrifeeder 11kV Line: 19.4 hrs/day average rural reliability'}
+                {activeMapPin === 'substation' && 'Rural Feeder Line: 19.4 hrs/day average electricity'}
               </div>
             </div>
             <button
               onClick={() => onNavigate('cluster-map')}
               className="text-primary font-bold hover:underline whitespace-nowrap ml-3 cursor-pointer"
             >
-              Open Cluster GIS →
+              Open Village Map →
             </button>
           </div>
         </div>
@@ -493,8 +493,8 @@ export const FeasibilityScreen: React.FC<FeasibilityScreenProps> = ({
       <div className="sticky bottom-4 z-30 bg-surface-container-lowest/95 backdrop-blur-md p-4 rounded-2xl border border-surface-variant shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs">
           <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-          <span className="font-bold text-on-surface">Dossier ID: DPR-UP-LKO-2026-0842</span>
-          <span className="hidden sm:inline text-outline">• All Statutory Pre-Requisites Met</span>
+          <span className="font-bold text-on-surface">Plan Ref: PLAN-UP-LKO-2026</span>
+          <span className="hidden sm:inline text-outline">• Village Feasibility Checked</span>
         </div>
 
         <div className="flex items-center gap-3">

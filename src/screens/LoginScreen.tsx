@@ -11,7 +11,7 @@ interface LoginScreenProps {
 // Pre-authorized temporary credentials
 export const AUTHORIZED_CREDENTIALS = [
   {
-    email: 'demo.citizen@grammitra.gov.in',
+    email: 'demo.citizen@grammitra.in',
     password: 'GramMitra@2026',
     name: 'Shri Lalu Yadav (Beneficiary)',
     role: 'Rural Beneficiary / Dairy Entrepreneur',
@@ -23,7 +23,7 @@ export const AUTHORIZED_CREDENTIALS = [
   {
     email: 'laluaj677@gmail.com',
     password: 'GramMitra@2026',
-    name: 'Lalu Aj (Verified Citizen)',
+    name: 'Lalu Aj (Citizen & Shopkeeper)',
     role: 'Panchayat Enterprise Promoter',
     citizenId: 'GM-2026-UP-7720',
     panchayat: 'Rampur Kalan',
@@ -31,10 +31,10 @@ export const AUTHORIZED_CREDENTIALS = [
     state: 'Uttar Pradesh',
   },
   {
-    email: 'vle.officer@grammitra.gov.in',
+    email: 'vle.officer@grammitra.in',
     password: 'GramMitra@2026',
-    name: 'Rameshwar Verma (CSC VLE)',
-    role: 'Village Level Entrepreneur Operator',
+    name: 'Rameshwar Verma (Village CSC Operator)',
+    role: 'Village Help Center Operator',
     citizenId: 'CSC-UP-LKO-88492',
     panchayat: 'Rampur Kalan Hub',
     district: 'Lucknow',
@@ -57,7 +57,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const t = LOGIN_TEXT[currentLanguage] || LOGIN_TEXT.en;
 
-  const handleAutofill = (targetEmail = 'demo.citizen@grammitra.gov.in') => {
+  const handleAutofill = (targetEmail = 'demo.citizen@grammitra.in') => {
     const cred = AUTHORIZED_CREDENTIALS.find((c) => c.email === targetEmail) || AUTHORIZED_CREDENTIALS[0];
     setEmail(cred.email);
     setPassword(cred.password);
@@ -95,7 +95,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (!matchedUser) {
         setIsLoading(false);
         setErrorMessage(
-          `${t.invalidEmailError} Entered: "${trimmedEmail}". Please use "demo.citizen@grammitra.gov.in" or "laluaj677@gmail.com".`
+          `${t.invalidEmailError} Entered: "${trimmedEmail}". Please use "demo.citizen@grammitra.in" or "laluaj677@gmail.com".`
         );
         onShowToast('Authentication failed: Credentials not available for this email', 'warning');
         return;
@@ -126,7 +126,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
       }
 
-      onShowToast(`Welcome, ${authUser.name}! Sovereign verification successful.`, 'success');
+      onShowToast(`Welcome, ${authUser.name}! You are now logged in.`, 'success');
       onLoginSuccess(authUser);
     }, 650);
   };
@@ -136,18 +136,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       <div className="w-full max-w-xl space-y-6">
         {/* Header Branding Card */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white shadow-xs border border-surface-variant mb-2">
-            <img
-              src="https://lh3.googleusercontent.com/aida/AEtjO1WhmvW-T1ONNWhu04HxAPs05gskK5nIQf6ZOJu9-Ta3HGDG-FKlyLg9NeU6NIclBC0D4uIoy_ibNNVzcEQ1cNFCRcMk4If_8ik3PAl6isiJJ59N0pMTEojWxeik2kzd9PdVN01W1jQdkqqFbTKX_EHsMYcXenS4IVnb5NzhOvi0K5l3DEkIxd4vT1TR1QWXifV2Ueqiapd3ZV5bLvCC4zCLJjuAJnRcScf1AkKYerkhsQ_HIiD_BRmMVCg"
-              alt="GramMitra Sovereign Emblem"
-              className="w-14 h-14 object-contain"
-            />
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-linear-to-br from-emerald-600 to-green-800 text-white shadow-xs mb-2">
+            <span className="material-symbols-outlined text-4xl">cottage</span>
           </div>
-          <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-primary tracking-wider uppercase">
-            <span className="w-2 h-2 rounded-full bg-[#ff9933]"></span>
-            <span className="w-2 h-2 rounded-full bg-white border border-gray-300"></span>
-            <span className="w-2 h-2 rounded-full bg-[#138808]"></span>
-            <span>GramMitra Portal Sovereign Gate</span>
+          <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800 tracking-wider">
+            <span>GramMitra • Gram Panchayat Portal</span>
           </div>
           <h1 className="font-display-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
             {t.title}
@@ -183,11 +176,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </span>
               <div className="flex items-center justify-between gap-1">
                 <code className="text-xs font-mono font-bold text-on-surface select-all break-all">
-                  demo.citizen@grammitra.gov.in
+                  demo.citizen@grammitra.in
                 </code>
                 <button
                   type="button"
-                  onClick={() => handleCopy('demo.citizen@grammitra.gov.in', 'Email')}
+                  onClick={() => handleCopy('demo.citizen@grammitra.in', 'Email')}
                   className="p-1 text-outline hover:text-primary rounded-md cursor-pointer"
                   title="Copy Email"
                 >
@@ -250,11 +243,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
-              onClick={() => handleAutofill('demo.citizen@grammitra.gov.in')}
+              onClick={() => handleAutofill('demo.citizen@grammitra.in')}
               className="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">bolt</span>
-              <span>Fill: demo.citizen@grammitra.gov.in</span>
+              <span>Fill: demo.citizen@grammitra.in</span>
             </button>
             <button
               type="button"
@@ -264,6 +257,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <span className="material-symbols-outlined text-sm">person</span>
               <span>Fill: laluaj677@gmail.com</span>
             </button>
+          </div>
+
+          {/* Honest Community Disclaimer */}
+          <div className="p-3 bg-stone-100 rounded-xl border border-stone-300 text-[11px] text-stone-700 flex items-start gap-2">
+            <span className="material-symbols-outlined text-amber-700 text-base shrink-0 mt-0.5">info</span>
+            <span>
+              {currentLanguage === 'hi'
+                ? 'नोट: ग्राममित्र एक स्वतंत्र ग्रामीण सामुदायिक व पंचायत सेवा पोर्टल है। यह किसी भी सरकारी निकाय या मंत्रालय का आधिकारिक प्रमाणित ऐप नहीं है।'
+                : 'Note: GramMitra is an open community helper web portal for Gram Panchayat citizens and shopkeepers. It is not affiliated with or certified by any government body.'}
+            </span>
           </div>
         </div>
 
@@ -276,7 +279,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <div className="space-y-1">
                 <div className="font-bold text-xs">{errorMessage}</div>
                 <div className="text-[11px] opacity-90">
-                  Tip: Click one of the amber buttons above to immediately populate the verified deployment credentials.
+                  Tip: Click one of the amber buttons above to immediately populate the quick login credentials.
                 </div>
               </div>
             </div>
@@ -299,7 +302,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     setEmail(e.target.value);
                     if (errorMessage) setErrorMessage(null);
                   }}
-                  placeholder="demo.citizen@grammitra.gov.in"
+                  placeholder="demo.citizen@grammitra.in"
                   className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-surface-variant bg-surface-container-low text-on-surface text-sm font-medium focus:border-primary focus:bg-white focus:outline-hidden transition-all"
                   required
                 />

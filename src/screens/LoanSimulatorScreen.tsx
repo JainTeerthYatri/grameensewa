@@ -30,10 +30,10 @@ export const LoanSimulatorScreen: React.FC<LoanSimulatorScreenProps> = ({
 
   const handleRouteToBank = () => {
     setIsRouting(true);
-    onShowToast('Transmitting Sanction Dossier to Lead District Bank (SBI / Aryavart)...', 'info');
+    onShowToast('Saving your loan & repayment plan...', 'info');
     setTimeout(() => {
       setIsRouting(false);
-      onShowToast('Sovereign Sanction Confirmed! Case Ref: LDB-UP-LKO-9941', 'success');
+      onShowToast('Repayment Plan Saved! Reference: PLAN-UP-LKO-9941', 'success');
     }, 1500);
   };
 
@@ -44,7 +44,7 @@ export const LoanSimulatorScreen: React.FC<LoanSimulatorScreenProps> = ({
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold mb-1">
             <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
-            GramMitra Financial Engine NBCFDC-NSFDC V3.4
+            GramMitra Easy Repayment & EMI Helper
           </div>
           <h1 className="font-display-lg text-primary tracking-tight">
             {sText.title}
@@ -95,7 +95,7 @@ export const LoanSimulatorScreen: React.FC<LoanSimulatorScreenProps> = ({
             ₹{sanctionedPrincipal.toLocaleString('en-IN')}
           </div>
           <div className="text-[11px] text-outline">
-            90% Concessional Term Loan (DPR: ₹10L)
+            Estimated Loan Amount (Total Cost: ₹10L)
           </div>
         </div>
 
@@ -106,7 +106,7 @@ export const LoanSimulatorScreen: React.FC<LoanSimulatorScreenProps> = ({
               {sText.concessionalInterest}
             </span>
             <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.2 rounded-sm">
-              -3.0% Subvention
+              Low Rate (5%)
             </span>
           </div>
           <div className="font-currency-display font-extrabold text-2xl text-on-surface">
@@ -462,7 +462,7 @@ export const LoanSimulatorScreen: React.FC<LoanSimulatorScreenProps> = ({
                 <span className="font-bold text-on-surface">10 High-Yield Cows (Gir & Murrah)</span>
                 <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.2 rounded-sm">Ear-Tagged</span>
               </div>
-              <p className="text-[11px] text-outline">INAPH sovereign digital cattle registry with veterinary immunization.</p>
+              <p className="text-[11px] text-outline">Registered healthy cattle with complete veterinary immunization.</p>
             </div>
           </div>
 
