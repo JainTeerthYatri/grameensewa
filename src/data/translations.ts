@@ -37,25 +37,25 @@ export const UI_STRINGS: Record<SupportedLanguage, {
   apexCorps: string;
 }> = {
   en: {
-    portalName: 'GramMitra - Gram Panchayat Portal',
-    portalSubtitle: 'Easy Village Services, Government Schemes & Business Support for Every Citizen',
+    portalName: 'GramMitra Village Portal',
+    portalSubtitle: 'Simple Village Business Setup, Bank Loans, Subsidies & Shop Khata',
     officialLanguage: 'Language',
     changeLanguage: 'Change Language',
     contrastMode: 'High Contrast',
-    navGateway: 'Home (Panchayat Seva)',
-    navKhata: 'Shop Khata (Hisab-Kitab)',
-    navFeasibility: 'Business Plan & Profit Check',
-    navCalculator: 'Loan & Subsidy Calculator',
-    navClusterMap: 'Village Map & Centers',
-    navSimulator: 'Repayment & Installment Helper',
-    dprSanctionRate: '98% Loan Success Rate',
+    navGateway: '1. Business Setup & GPS Map',
+    navKhata: '3. Shop Bahi-Khata',
+    navFeasibility: 'Business Plan & Profit',
+    navCalculator: '2. Loans, Subsidies & Banks',
+    navClusterMap: 'Village Map',
+    navSimulator: 'EMI Calculator',
+    dprSanctionRate: '98% Fast Approval',
     activePanchayats: '42,910+ Villages Connected',
-    sovereignHeader: 'GRAM PANCHAYAT CITIZEN SERVICES | Village Community & Enterprise Helper',
+    sovereignHeader: 'GRAMMITRA VILLAGE PORTAL | Community Business & Khata Helper',
     nationalPortal: 'Village Citizen Portal',
-    voiceSahayak: 'Voice Help (Bol Kar Puchhein)',
-    sovereignAlerts: 'Panchayat Notices & Updates',
+    voiceSahayak: 'Voice Help',
+    sovereignAlerts: 'Panchayat Notices',
     unread: 'New',
-    apexCorps: 'Supported by Village & Small Enterprise Welfare Schemes'
+    apexCorps: 'Rural Community Business Support'
   },
   hi: {
     portalName: 'ग्राममित्र पोर्टल',

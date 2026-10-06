@@ -47,7 +47,7 @@ export function App() {
     }
   });
 
-  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>('hi');
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>('en');
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);

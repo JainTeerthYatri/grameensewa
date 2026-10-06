@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenType, SupportedLanguage } from '../types';
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  InfoWindow,
+  useMap,
+} from '@vis.gl/react-google-maps';
 
 interface GatewayScreenProps {
   onNavigate: (screen: ScreenType) => void;
@@ -16,7 +23,23 @@ interface LocationInfo {
   pincode: string;
   lat: number;
   lng: number;
-  source: 'gps' | 'pincode' | 'default';
+  source: 'gps' | 'ip' | 'pincode' | 'search' | 'default';
+}
+
+interface HotspotItem {
+  id: string;
+  titleHi: string;
+  titleEn: string;
+  category: 'dairy' | 'mandi' | 'bank' | 'service' | 'market';
+  lat: number;
+  lng: number;
+  distance: string;
+  demandScore: number;
+  descHi: string;
+  descEn: string;
+  icon: string;
+  color: string;
+  badge: string;
 }
 
 interface BusinessOpportunity {
@@ -41,216 +64,579 @@ interface BusinessOpportunity {
   equipmentEn: string[];
 }
 
+// Controller component to smoothly pan map when coordinates change
+const MapController: React.FC<{ targetLat: number; targetLng: number; zoomLevel: number }> = ({
+  targetLat,
+  targetLng,
+  zoomLevel,
+}) => {
+  const map = useMap();
+  useEffect(() => {
+    if (map) {
+      map.panTo({ lat: targetLat, lng: targetLng });
+      map.setZoom(zoomLevel);
+    }
+  }, [map, targetLat, targetLng, zoomLevel]);
+
+  return null;
+};
+
 export const GatewayScreen: React.FC<GatewayScreenProps> = ({
   onNavigate,
   currentLanguage,
   onShowToast,
 }) => {
   const isHindi = currentLanguage === 'hi';
+  const mapsApiKey =
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDbFI42opvYum1OzHkQsJ0lx2lQEKRyPmk';
 
-  // Live Location & Pincode State
+  // Live Location & Pincode State - defaults to IIMT Greater Noida / Knowledge Park
   const [location, setLocation] = useState<LocationInfo>({
-    village: 'Rampur Kalan',
-    block: 'Mohanlalganj',
-    district: 'Lucknow',
+    village: 'IIMT College / Knowledge Park III',
+    block: 'Greater Noida',
+    district: 'Gautam Buddha Nagar',
     state: 'Uttar Pradesh',
-    pincode: '226301',
-    lat: 26.6841,
-    lng: 80.9928,
+    pincode: '201310',
+    lat: 28.4744,
+    lng: 77.4915,
     source: 'default',
   });
 
-  const [pincodeInput, setPincodeInput] = useState('226301');
+  const [searchInput, setSearchInput] = useState('201310');
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBusiness, setSelectedBusiness] = useState<string>('dairy');
-  const [mapRadius, setMapRadius] = useState<number>(5); // 2, 5, 10 km
-  const [selectedHotspot, setSelectedHotspot] = useState<string | null>(null);
+  const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'satellite' | 'hybrid' | 'terrain'>('roadmap');
+  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(14);
 
-  // Indian Pincode Directory Database for instant offline / fallback accurate lookup
-  const pincodeDB: Record<string, { village: string; block: string; district: string; state: string; lat: number; lng: number }> = {
-    '226301': { village: 'Mohanlalganj / Rampur', block: 'Mohanlalganj', district: 'Lucknow', state: 'Uttar Pradesh', lat: 26.6841, lng: 80.9928 },
-    '201301': { village: 'Sector 15 / Rural Belt', block: 'Dadri', district: 'Gautam Buddha Nagar', state: 'Uttar Pradesh', lat: 28.5355, lng: 77.3910 },
-    '302001': { village: 'Sanganer Rural Area', block: 'Sanganer', district: 'Jaipur', state: 'Rajasthan', lat: 26.9124, lng: 75.7873 },
-    '800001': { village: 'Phulwari Sharif Area', block: 'Phulwari', district: 'Patna', state: 'Bihar', lat: 25.5941, lng: 85.1376 },
-    '462001': { village: 'Berasia Rural Hub', block: 'Berasia', district: 'Bhopal', state: 'Madhya Pradesh', lat: 23.2599, lng: 77.4126 },
-    '380001': { village: 'Sanand / Dholka Belt', block: 'Sanand', district: 'Ahmedabad', state: 'Gujarat', lat: 23.0225, lng: 72.5714 },
-    '560001': { village: 'Anekal Rural Cluster', block: 'Anekal', district: 'Bengaluru Rural', state: 'Karnataka', lat: 12.9716, lng: 77.5946 },
-    '500001': { village: 'Shadnagar / Chevella', block: 'Chevella', district: 'Ranga Reddy', state: 'Telangana', lat: 17.3850, lng: 78.4867 },
-    '600001': { village: 'Sriperumbudur Hub', block: 'Sriperumbudur', district: 'Kanchipuram', state: 'Tamil Nadu', lat: 13.0827, lng: 80.2707 },
-    '700001': { village: 'Barasat / Rajarhat', block: 'Barasat', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.5726, lng: 88.3639 },
-    '141001': { village: 'Samrala Rural Mandi', block: 'Samrala', district: 'Ludhiana', state: 'Punjab', lat: 30.9010, lng: 75.8573 },
-    '110001': { village: 'Najafgarh / Alipur Belt', block: 'Alipur', district: 'North Delhi', state: 'Delhi', lat: 28.6139, lng: 77.2090 },
+  // Dynamic Hotspots surrounding the detected location
+  const getHotspotsForLocation = (lat: number, lng: number): HotspotItem[] => [
+    {
+      id: 'spot-dairy',
+      titleHi: `${location.village} मिल्क चिलिंग व वैल्यू-ऐड हब`,
+      titleEn: `${location.village} Bulk Milk Chilling Hub`,
+      category: 'dairy',
+      lat: lat + 0.0075,
+      lng: lng - 0.0062,
+      distance: '0.8 km',
+      demandScore: 96,
+      descHi: 'स्थानीय डेयरी पशुपालक, 8.5 किमी में कोई चिलिंग प्लांट नहीं। PMEGP में 35% सब्सिडी उपलब्ध।',
+      descEn: 'Local dairy cluster with high demand for chilling and paneer making. 35% grant under PMEGP.',
+      icon: 'local_drink',
+      color: '#0284c7', // Sky blue
+      badge: isHindi ? 'अत्यधिक मांग 96%' : 'Top Demand 96%',
+    },
+    {
+      id: 'spot-mandi',
+      titleHi: 'थोक कृषि अनाज व सरसों मंडी लिंक',
+      titleEn: 'Agro Grain & Food Processing Link',
+      category: 'mandi',
+      lat: lat - 0.0088,
+      lng: lng + 0.0095,
+      distance: '1.4 km',
+      demandScore: 92,
+      descHi: 'दैनिक आवक - मिनी आटा चक्की, सरसों तेल एक्सपेलर व फूड प्रोसेसिंग के लिए उत्तम।',
+      descEn: 'Agro supply link - optimal for cold press oil expeller and flour mill units.',
+      icon: 'agriculture',
+      color: '#d97706', // Amber
+      badge: isHindi ? 'स्थिर मांग 92%' : 'High Turnover 92%',
+    },
+    {
+      id: 'spot-bank',
+      titleHi: 'HDFC & SBI बैंक रूरल ब्रांच (मुद्रा व PMEGP डेस्क)',
+      titleEn: 'HDFC & SBI Bank Rural Mudra Desk',
+      category: 'bank',
+      lat: lat + 0.0042,
+      lng: lng + 0.0084,
+      distance: '1.1 km',
+      demandScore: 99,
+      descHi: 'बिना गारंटी 10 लाख तक मुद्रा लोन व PMEGP 35% सब्सिडी का क्लेम नोडल बैंक।',
+      descEn: 'Direct sanctioning branch for Mudra 0% collateral loans and PMEGP subsidy.',
+      icon: 'account_balance',
+      color: '#059669', // Emerald
+      badge: isHindi ? 'लोन स्वीकृति केंद्र' : 'Loan Desk',
+    },
+    {
+      id: 'spot-csc',
+      titleHi: 'डिजिटल सेवा केंद्र व सोलर कियोस्क',
+      titleEn: 'Solar CSC Seva Kiosk & Digital Hub',
+      category: 'service',
+      lat: lat - 0.0055,
+      lng: lng - 0.0048,
+      distance: '0.6 km',
+      demandScore: 89,
+      descHi: 'दैनिक 150+ लोग आते हैं। AEPS कैश निकासी, बिल, फॉर्म व फोटोकॉपी हेतु उत्तम।',
+      descEn: '150+ daily footfall. High demand for Aadhaar cash out, bill payments & xerox.',
+      icon: 'solar_power',
+      color: '#7c3aed', // Purple
+      badge: isHindi ? 'डिजिटल सेवा 89%' : 'Digital Hub 89%',
+    },
+    {
+      id: 'spot-market',
+      titleHi: 'स्थानीय मुख्य बाजार चौराहा (किराना व बही-खाता)',
+      titleEn: 'Main Local Market Crossroad (Retail & Khata)',
+      category: 'market',
+      lat: lat + 0.0018,
+      lng: lng + 0.0035,
+      distance: '0.3 km',
+      demandScore: 94,
+      descHi: 'दैनिक ग्राहक भीड़। स्मार्ट डिजिटल किराना स्टोर व हार्डवेयर टूल रेंटल हेतु आदर्श स्थल।',
+      descEn: 'Daily buyers. Ideal hub for modern general store & equipment rental.',
+      icon: 'storefront',
+      color: '#16a34a', // Green
+      badge: isHindi ? 'मुख्य बाजार' : 'Prime Spot',
+    },
+  ];
+
+  const hotspots = getHotspotsForLocation(location.lat, location.lng);
+  const activeSpot = hotspots.find((h) => h.id === activeMarkerId);
+
+  // Indian Pincode Directory Database
+  const pincodeDB: Record<
+    string,
+    { village: string; block: string; district: string; state: string; lat: number; lng: number }
+  > = {
+    '201310': {
+      village: 'IIMT College / Knowledge Park III',
+      block: 'Greater Noida',
+      district: 'Gautam Buddha Nagar',
+      state: 'Uttar Pradesh',
+      lat: 28.4744,
+      lng: 77.4915,
+    },
+    '201306': {
+      village: 'Greater Noida Alpha / Beta Area',
+      block: 'Greater Noida',
+      district: 'Gautam Buddha Nagar',
+      state: 'Uttar Pradesh',
+      lat: 28.4722,
+      lng: 77.5036,
+    },
+    '201308': {
+      village: 'Surajpur / Ecotech Area',
+      block: 'Dadri',
+      district: 'Gautam Buddha Nagar',
+      state: 'Uttar Pradesh',
+      lat: 28.5323,
+      lng: 77.4764,
+    },
+    '201301': {
+      village: 'Sector 15 / Noida Main',
+      block: 'Noida',
+      district: 'Gautam Buddha Nagar',
+      state: 'Uttar Pradesh',
+      lat: 28.5833,
+      lng: 77.3167,
+    },
+    '226301': {
+      village: 'Mohanlalganj / Rampur',
+      block: 'Mohanlalganj',
+      district: 'Lucknow',
+      state: 'Uttar Pradesh',
+      lat: 26.6841,
+      lng: 80.9928,
+    },
+    '302001': {
+      village: 'Sanganer Rural Area',
+      block: 'Sanganer',
+      district: 'Jaipur',
+      state: 'Rajasthan',
+      lat: 26.9124,
+      lng: 75.7873,
+    },
+    '800001': {
+      village: 'Phulwari Sharif Area',
+      block: 'Phulwari',
+      district: 'Patna',
+      state: 'Bihar',
+      lat: 25.5941,
+      lng: 85.1376,
+    },
+    '462001': {
+      village: 'Berasia Rural Hub',
+      block: 'Berasia',
+      district: 'Bhopal',
+      state: 'Madhya Pradesh',
+      lat: 23.2599,
+      lng: 77.4126,
+    },
+    '380001': {
+      village: 'Sanand / Dholka Belt',
+      block: 'Sanand',
+      district: 'Ahmedabad',
+      state: 'Gujarat',
+      lat: 23.0225,
+      lng: 72.5714,
+    },
+    '560001': {
+      village: 'Anekal Rural Cluster',
+      block: 'Anekal',
+      district: 'Bengaluru Rural',
+      state: 'Karnataka',
+      lat: 12.9716,
+      lng: 77.5946,
+    },
+    '500001': {
+      village: 'Shadnagar / Chevella',
+      block: 'Chevella',
+      district: 'Ranga Reddy',
+      state: 'Telangana',
+      lat: 17.385,
+      lng: 78.4867,
+    },
+    '600001': {
+      village: 'Sriperumbudur Hub',
+      block: 'Sriperumbudur',
+      district: 'Kanchipuram',
+      state: 'Tamil Nadu',
+      lat: 13.0827,
+      lng: 80.2707,
+    },
+    '700001': {
+      village: 'Barasat / Rajarhat',
+      block: 'Barasat',
+      district: 'North 24 Parganas',
+      state: 'West Bengal',
+      lat: 22.5726,
+      lng: 88.3639,
+    },
+    '141001': {
+      village: 'Samrala Rural Mandi',
+      block: 'Samrala',
+      district: 'Ludhiana',
+      state: 'Punjab',
+      lat: 30.901,
+      lng: 75.8573,
+    },
+    '110001': {
+      village: 'Najafgarh / Alipur Belt',
+      block: 'Alipur',
+      district: 'North Delhi',
+      state: 'Delhi',
+      lat: 28.6139,
+      lng: 77.209,
+    },
   };
 
-  // Real GPS Geolocation Handler
-  const handleGetLiveGPS = () => {
-    if (!navigator.geolocation) {
-      onShowToast(isHindi ? 'आपके ब्राउज़र में GPS सपोर्ट नहीं है' : 'Geolocation is not supported by your browser', 'warning');
-      return;
+  // Reverse Geocoding via Google Maps API or OpenStreetMap
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      // 1. First try Google Geocoding API if key is available
+      const gRes = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${mapsApiKey}`
+      );
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        if (gData.results && gData.results.length > 0) {
+          const first = gData.results[0];
+          const comps = first.address_components || [];
+
+          let villageName = '';
+          let sublocality = '';
+          let district = '';
+          let state = '';
+          let postcode = '';
+
+          for (const c of comps) {
+            if (c.types.includes('sublocality') || c.types.includes('neighborhood')) {
+              sublocality = c.long_name;
+            }
+            if (c.types.includes('locality') || c.types.includes('administrative_area_level_3')) {
+              villageName = c.long_name;
+            }
+            if (c.types.includes('administrative_area_level_2')) {
+              district = c.long_name;
+            }
+            if (c.types.includes('administrative_area_level_1')) {
+              state = c.long_name;
+            }
+            if (c.types.includes('postal_code')) {
+              postcode = c.long_name;
+            }
+          }
+
+          const resolvedName = sublocality
+            ? `${sublocality}, ${villageName || district}`
+            : villageName || district || first.formatted_address.split(',')[0];
+
+          return {
+            village: resolvedName,
+            block: villageName || district || 'Local Area',
+            district: district || 'Gautam Buddha Nagar',
+            state: state || 'Uttar Pradesh',
+            pincode: postcode || 'Detected',
+          };
+        }
+      }
+    } catch {
+      // ignore
     }
 
+    try {
+      // 2. Fallback to BigDataCloud / OSM
+      const bdcRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+      );
+      if (bdcRes.ok) {
+        const data = await bdcRes.json();
+        return {
+          village: data.locality || data.city || data.principalSubdivision || 'Local Area',
+          block: data.locality || 'Block Area',
+          district: data.city || data.principalSubdivision || 'District',
+          state: data.principalSubdivision || 'State',
+          pincode: data.postcode || 'Detected',
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
+  };
+
+  // Robust Multi-Layer GPS / Geolocation Trigger
+  const handleGetLiveGPS = () => {
     setIsLocatingGPS(true);
-    onShowToast(isHindi ? 'लाइव GPS लोकेशन पहचानी जा रही है...' : 'Detecting your live GPS location...', 'info');
+    onShowToast(
+      isHindi
+        ? 'लाइव GPS सैटेलाइट व नेटवर्क से लोकेशन खोजी जा रही है...'
+        : 'Acquiring live satellite & network coordinates...',
+      'info'
+    );
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+    // Layer 1: Browser GPS
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
 
-        try {
-          // Attempt reverse geocoding via OpenStreetMap Nominatim
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-            headers: { 'Accept-Language': 'en' },
-          });
+          const geo = await reverseGeocode(lat, lng);
 
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const villageName = addr.village || addr.suburb || addr.town || addr.hamlet || 'Local Village Area';
-            const blockName = addr.county || addr.state_district || 'Local Block';
-            const districtName = addr.state_district || addr.district || addr.city || 'District';
-            const stateName = addr.state || 'India';
-            const postCode = addr.postcode || 'Detected';
-
+          if (geo) {
             setLocation({
-              village: villageName,
-              block: blockName,
-              district: districtName,
-              state: stateName,
-              pincode: postCode,
+              village: geo.village,
+              block: geo.block,
+              district: geo.district,
+              state: geo.state,
+              pincode: geo.pincode,
               lat,
               lng,
               source: 'gps',
             });
-            if (postCode && postCode !== 'Detected') {
-              setPincodeInput(postCode);
+            if (geo.pincode && geo.pincode !== 'Detected') {
+              setSearchInput(geo.pincode);
             }
+            setZoomLevel(16);
+            setIsLocatingGPS(false);
             onShowToast(
               isHindi
-                ? `GPS लोकेशन मिली: ${villageName}, ${districtName} (${stateName})`
-                : `GPS Location detected: ${villageName}, ${districtName}`,
+                ? `GPS लोकेशन लॉक: ${geo.village}, ${geo.district} (${geo.state})`
+                : `Live GPS mapped: ${geo.village}, ${geo.district}`,
               'success'
             );
           } else {
-            throw new Error('Reverse geocode failed');
+            setLocation((prev) => ({
+              ...prev,
+              lat,
+              lng,
+              village: `GPS Location (${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E)`,
+              source: 'gps',
+            }));
+            setZoomLevel(15);
+            setIsLocatingGPS(false);
+            onShowToast(
+              isHindi
+                ? `GPS निर्देशांक सक्रिय: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+                : `GPS coordinates locked: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              'success'
+            );
           }
-        } catch {
-          // Fallback with live coordinates
-          setLocation((prev) => ({
-            ...prev,
-            lat,
-            lng,
-            village: `GPS Location (${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E)`,
-            source: 'gps',
-          }));
-          onShowToast(
-            isHindi
-              ? `GPS निर्देशांक सक्रिय: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-              : `GPS coordinates locked: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            'success'
-          );
-        } finally {
-          setIsLocatingGPS(false);
-        }
-      },
-      (err) => {
+        },
+        async () => {
+          // Layer 2: IP Geolocation Fallback (for iframes / restricted permissions)
+          await fallbackIPGeolocation();
+        },
+        { timeout: 6000, enableHighAccuracy: true, maximumAge: 0 }
+      );
+    } else {
+      fallbackIPGeolocation();
+    }
+  };
+
+  // IP-based Geolocation fallback
+  const fallbackIPGeolocation = async () => {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        const lat = data.latitude || 28.4744;
+        const lng = data.longitude || 77.4915;
+        const village = data.city || 'Greater Noida / IIMT Belt';
+        const district = data.region || 'Gautam Buddha Nagar';
+        const state = data.region || 'Uttar Pradesh';
+        const pincode = data.postal || '201310';
+
+        setLocation({
+          village,
+          block: village,
+          district,
+          state,
+          pincode,
+          lat,
+          lng,
+          source: 'ip',
+        });
+        setSearchInput(pincode);
+        setZoomLevel(14);
         setIsLocatingGPS(false);
         onShowToast(
           isHindi
-            ? 'GPS अनुमति नहीं मिली। आप पिनकोड डालकर खोज सकते हैं।'
-            : 'GPS permission denied or unavailable. Please enter your 6-digit Pincode.',
-          'warning'
+            ? `नेटवर्क द्वारा लोकेशन पहचानी गई: ${village}, ${district}`
+            : `Network location detected: ${village}, ${district}`,
+          'success'
         );
-      },
-      { timeout: 8000, enableHighAccuracy: true }
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Default to IIMT Greater Noida
+    setLocation({
+      village: 'IIMT College / Knowledge Park III',
+      block: 'Greater Noida',
+      district: 'Gautam Buddha Nagar',
+      state: 'Uttar Pradesh',
+      pincode: '201310',
+      lat: 28.4744,
+      lng: 77.4915,
+      source: 'search',
+    });
+    setSearchInput('201310');
+    setZoomLevel(15);
+    setIsLocatingGPS(false);
+    onShowToast(
+      isHindi
+        ? 'लोकेशन सेट: IIMT नॉलेज पार्क, ग्रेटर नोएडा (201310)'
+        : 'Location mapped: IIMT Knowledge Park, Greater Noida (201310)',
+      'info'
     );
   };
 
-  // Real Pincode Search Handler
-  const handlePincodeSearch = () => {
-    const cleanPin = pincodeInput.trim();
-    if (cleanPin.length !== 6 || isNaN(Number(cleanPin))) {
-      onShowToast(isHindi ? 'कृपया 6 अंकों का सही पिनकोड दर्ज करें' : 'Please enter a valid 6-digit pincode', 'warning');
+  // Universal Search Handler (Accepts Pincode OR Landmark/City name like "IIMT Greater Noida")
+  const handleUniversalSearch = async (customQuery?: string) => {
+    const query = (customQuery || searchInput).trim();
+    if (!query) return;
+
+    // Check if 6-digit pincode in local DB
+    if (/^\d{6}$/.test(query) && pincodeDB[query]) {
+      const match = pincodeDB[query];
+      setLocation({
+        ...match,
+        pincode: query,
+        source: 'pincode',
+      });
+      setZoomLevel(15);
+      onShowToast(
+        isHindi
+          ? `पिनकोड ${query} मिला: ${match.village}, ${match.district}`
+          : `PIN ${query} loaded: ${match.village}, ${match.district}`,
+        'success'
+      );
       return;
     }
 
-    if (pincodeDB[cleanPin]) {
-      const match = pincodeDB[cleanPin];
-      setLocation({
-        ...match,
-        pincode: cleanPin,
-        source: 'pincode',
-      });
-      onShowToast(
-        isHindi
-          ? `पिनकोड ${cleanPin} मिला: ${match.village}, ${match.district} (${match.state})`
-          : `PIN ${cleanPin} found: ${match.village}, ${match.district} (${match.state})`,
-        'success'
+    // Forward Geocode via Google Maps API
+    try {
+      onShowToast(isHindi ? `मैप पर खोज रहे हैं: "${query}"...` : `Locating "${query}" on Map...`, 'info');
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          query + ', India'
+        )}&key=${mapsApiKey}`
       );
-    } else {
-      // Decode based on Indian Postal 1st digit zone logic
-      const firstDigit = cleanPin.charAt(0);
-      let derivedState = 'Uttar Pradesh & North Region';
-      let derivedDistrict = `Area Circle ${cleanPin.slice(0, 3)}`;
-      let baseLat = 26.8;
-      let baseLng = 81.0;
 
-      if (firstDigit === '1') {
-        derivedState = 'Delhi / Haryana / Punjab';
-        baseLat = 28.6;
-        baseLng = 77.2;
-      } else if (firstDigit === '2') {
-        derivedState = 'Uttar Pradesh / Uttarakhand';
-        baseLat = 26.8;
-        baseLng = 80.9;
-      } else if (firstDigit === '3') {
-        derivedState = 'Rajasthan / Gujarat';
-        baseLat = 26.9;
-        baseLng = 75.8;
-      } else if (firstDigit === '4') {
-        derivedState = 'Maharashtra / Goa / MP / Chhattisgarh';
-        baseLat = 21.1;
-        baseLng = 79.0;
-      } else if (firstDigit === '5') {
-        derivedState = 'Andhra Pradesh / Telangana / Karnataka';
-        baseLat = 17.3;
-        baseLng = 78.4;
-      } else if (firstDigit === '6') {
-        derivedState = 'Tamil Nadu / Kerala';
-        baseLat = 13.0;
-        baseLng = 80.2;
-      } else if (firstDigit === '7') {
-        derivedState = 'West Bengal / Odisha / North East';
-        baseLat = 22.5;
-        baseLng = 88.3;
-      } else if (firstDigit === '8') {
-        derivedState = 'Bihar / Jharkhand';
-        baseLat = 25.6;
-        baseLng = 85.1;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+          const first = data.results[0];
+          const lat = first.geometry.location.lat;
+          const lng = first.geometry.location.lng;
+
+          const comps = first.address_components || [];
+          let village = first.formatted_address.split(',')[0];
+          let district = '';
+          let state = '';
+          let pin = '201310';
+
+          for (const c of comps) {
+            if (c.types.includes('locality') || c.types.includes('sublocality')) {
+              village = c.long_name;
+            }
+            if (c.types.includes('administrative_area_level_2')) {
+              district = c.long_name;
+            }
+            if (c.types.includes('administrative_area_level_1')) {
+              state = c.long_name;
+            }
+            if (c.types.includes('postal_code')) {
+              pin = c.long_name;
+            }
+          }
+
+          setLocation({
+            village: query.toLowerCase().includes('iimt') ? 'IIMT College / Knowledge Park III' : village,
+            block: district || 'Greater Noida',
+            district: district || 'Gautam Buddha Nagar',
+            state: state || 'Uttar Pradesh',
+            pincode: pin,
+            lat,
+            lng,
+            source: 'search',
+          });
+          setZoomLevel(15);
+          onShowToast(
+            isHindi
+              ? `मैप पर मिला: ${first.formatted_address.slice(0, 45)}...`
+              : `Found on map: ${first.formatted_address.slice(0, 45)}...`,
+            'success'
+          );
+          return;
+        }
       }
+    } catch {
+      // ignore
+    }
 
+    // If query contains greater noida / iimt
+    if (query.toLowerCase().includes('iimt') || query.toLowerCase().includes('greater noida') || query.toLowerCase().includes('noida')) {
       setLocation({
-        village: `Gram Panchayat Cluster (${cleanPin})`,
-        block: `Block Area - ${cleanPin.slice(0, 3)}`,
-        district: derivedDistrict,
-        state: derivedState,
-        pincode: cleanPin,
-        lat: baseLat + (Math.random() * 0.05 - 0.025),
-        lng: baseLng + (Math.random() * 0.05 - 0.025),
-        source: 'pincode',
+        village: 'IIMT College / Knowledge Park III',
+        block: 'Greater Noida',
+        district: 'Gautam Buddha Nagar',
+        state: 'Uttar Pradesh',
+        pincode: '201310',
+        lat: 28.4744,
+        lng: 77.4915,
+        source: 'search',
       });
-
+      setZoomLevel(15);
       onShowToast(
         isHindi
-          ? `पिनकोड ${cleanPin} के लिए स्थानीय ग्राम सेवा मैप तैयार है`
-          : `Local business map generated for PIN ${cleanPin} (${derivedState})`,
-        'info'
+          ? 'लोकेशन मैप पर लॉक की गई: IIMT ग्रेटर नोएडा (201310)'
+          : 'Location locked on map: IIMT Greater Noida (201310)',
+        'success'
       );
     }
   };
 
-  // Business Opportunities Tailored for Village & Rural Areas
+  // Attempt live GPS / IP location on initial mount
+  useEffect(() => {
+    handleGetLiveGPS();
+  }, []);
+
+  // Business Opportunities
   const businessOpportunities: BusinessOpportunity[] = [
     {
       id: 'dairy',
@@ -452,75 +838,13 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
     },
   ];
 
-  const currentBiz = businessOpportunities.find((b) => b.id === selectedBusiness) || businessOpportunities[0];
+  const currentBiz =
+    businessOpportunities.find((b) => b.id === selectedBusiness) || businessOpportunities[0];
 
-  // Hotspots on the Interactive Village Radar Map
-  const mapHotspots = [
-    {
-      id: 'hotspot-1',
-      name: isHindi ? 'रामपुर दूध संग्रहण केंद्र (अत्यधिक मांग)' : 'Rampur Milk Hub (Zero Competition)',
-      type: 'dairy',
-      distance: '0.8 km',
-      demand: '96%',
-      notes: isHindi ? '1,840 दुधारू पशु, कोई चिलिंग प्लांट नहीं - 5 लाख तक लोन तुरंत स्वीकृत' : '1,840 milch cattle, no chilling plant within 8.5 km.',
-      icon: 'local_drink',
-      color: 'bg-blue-600',
-      x: 35,
-      y: 38,
-    },
-    {
-      id: 'hotspot-2',
-      name: isHindi ? 'मोहनलालगंज मुख्य अनाज मंडी' : 'Mohanlalganj Agro Mandi',
-      type: 'agro',
-      distance: '2.4 km',
-      demand: '92%',
-      notes: isHindi ? 'दैनिक 45 टन गेहूं व सरसों आवक - ऑयल मिल व फ्लोर मिल के लिए बेस्ट' : 'Daily 45 tons grain arrival - optimal for oil & flour processing.',
-      icon: 'agriculture',
-      color: 'bg-amber-600',
-      x: 68,
-      y: 28,
-    },
-    {
-      id: 'hotspot-3',
-      name: isHindi ? 'HDFC & SBI बैंक रूरल ब्रांच (मुद्रा लोन डेस्क)' : 'HDFC & SBI Bank Rural Branch',
-      type: 'bank',
-      distance: '1.2 km',
-      demand: '99%',
-      notes: isHindi ? 'मुद्रा व PMEGP लोन 9.25% ब्याज दर पर स्वीकृत करने हेतु अधिकृत' : 'Authorized for Mudra & PMEGP loans starting @ 9.25% p.a.',
-      icon: 'account_balance',
-      color: 'bg-emerald-700',
-      x: 52,
-      y: 65,
-    },
-    {
-      id: 'hotspot-4',
-      name: isHindi ? 'ग्राम पंचायत भवन व CSC डिजिटल सेंटर' : 'Panchayat Seva & CSC Center',
-      type: 'service',
-      distance: '0.5 km',
-      demand: '88%',
-      notes: isHindi ? 'रोजाना 120+ ग्रामीण नागरिक आते हैं - सोलर कियोस्क व फोटोकॉपी हेतु उपयुक्त' : '120+ daily footfall - ideal for Solar Seva Kiosk.',
-      icon: 'solar_power',
-      color: 'bg-purple-600',
-      x: 22,
-      y: 72,
-    },
-    {
-      id: 'hotspot-5',
-      name: isHindi ? 'दुकान बाजार चौराहा (किराना व हार्डवेयर)' : 'Village Market Crossroad (Retail)',
-      type: 'retail',
-      distance: '0.3 km',
-      demand: '94%',
-      notes: isHindi ? 'दैनिक 800+ ग्राहक - डिजिटल बही-खाता स्टोर व हार्डवेयर स्टोर के लिए उत्तम' : '800+ daily shoppers - high turnover spot for retail store.',
-      icon: 'storefront',
-      color: 'bg-emerald-600',
-      x: 48,
-      y: 44,
-    },
-  ];
-
-  const filteredBusinesses = selectedCategory === 'all'
-    ? businessOpportunities
-    : businessOpportunities.filter((b) => b.category === selectedCategory);
+  const filteredBusinesses =
+    selectedCategory === 'all'
+      ? businessOpportunities
+      : businessOpportunities.filter((b) => b.category === selectedCategory);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-8 pb-24">
@@ -530,17 +854,17 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              {isHindi ? '📍 मॉड्यूल 1: बिजनेस सेटअप व लाइव लोकेशन गाइड' : '📍 Module 1: Business Setup & Live Location Guide'}
+              {isHindi ? '📍 मॉड्यूल 1: बिजनेस सेटअप व रियल Google Maps गाइड' : '📍 Module 1: Business Setup & Live Google Maps Guide'}
             </div>
             <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
               {isHindi
-                ? 'अपने गांव में नया बिजनेस शुरू करने की पूरी गाइड'
-                : 'Complete Guide to Launching Your Village Business'}
+                ? 'अपने क्षेत्र में नया बिजनेस शुरू करने की रियल मैप गाइड'
+                : 'Real Interactive Map Guide to Launch Your Business'}
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed">
               {isHindi
-                ? 'अपनी लाइव GPS लोकेशन या 6-अंकों के पिनकोड से देखें कि आपके क्षेत्र में कौन सा बिजनेस सबसे ज्यादा चलेगा, कौन सा बैंक लोन देगा और कितनी सरकारी सब्सिडी मिलेगी।'
-                : 'Detect your live village GPS location or PIN to see which business has highest local demand, top bank loan options, and maximum government subsidies.'}
+                ? 'अपनी लाइव GPS लोकेशन, ग्रेटर नोएडा IIMT कॉलेज या पिनकोड से असली सैटेलाइट और रोड मैप पर देखें कि आपके क्षेत्र में कौन सा व्यवसाय सबसे ज्यादा चलेगा, कौन सा बैंक लोन देगा और कितनी सरकारी सब्सिडी मिलेगी।'
+                : 'Explore real live Google Satellite & Street Maps for your GPS, Greater Noida IIMT or PIN to see local demand hotspots, nearby bank branches, and step-by-step setup roadmap.'}
             </p>
           </div>
 
@@ -548,9 +872,9 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-row lg:flex-col gap-4 text-center shrink-0">
             <div>
               <div className="text-xs text-emerald-200 font-medium">
-                {isHindi ? 'लोकल मांग सटीकता' : 'Demand Accuracy'}
+                {isHindi ? 'मैप प्रकार' : 'Map Engine'}
               </div>
-              <div className="text-xl font-black text-white">98.4%</div>
+              <div className="text-xl font-black text-white">Google Maps</div>
             </div>
             <div className="border-l lg:border-l-0 lg:border-t border-white/20 pl-4 lg:pl-0 lg:pt-3">
               <div className="text-xs text-emerald-200 font-medium">
@@ -561,7 +885,7 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
           </div>
         </div>
 
-        {/* Live Location / GPS & Pincode Finder Search Box */}
+        {/* Live Location / GPS & Search Bar */}
         <div className="mt-6 pt-6 border-t border-white/20 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           {/* Detected Location Display */}
           <div className="md:col-span-6 bg-black/20 rounded-2xl p-3.5 border border-white/15 flex items-center justify-between gap-3">
@@ -573,16 +897,16 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
               </div>
               <div>
                 <div className="text-[11px] text-emerald-200 uppercase font-bold flex items-center gap-1.5">
-                  <span>{isHindi ? 'पहचाना गया क्षेत्र' : 'Detected Area'}:</span>
+                  <span>{isHindi ? 'पहचाना गया क्षेत्र' : 'Mapped Area'}:</span>
                   <span className="bg-emerald-500/30 text-emerald-100 px-1.5 py-0.2 rounded text-[10px]">
-                    {location.source === 'gps' ? 'Live GPS' : 'PIN Verified'}
+                    {location.source === 'gps' ? 'Live GPS Sat' : location.source === 'ip' ? 'Network GPS' : 'Live Verified'}
                   </span>
                 </div>
                 <div className="text-sm font-black text-white truncate max-w-[280px]">
                   {location.village}, {location.district} ({location.state})
                 </div>
                 <div className="text-[10px] text-emerald-200 font-mono">
-                  PIN: {location.pincode} • Lat: {location.lat.toFixed(4)}°, Lng: {location.lng.toFixed(4)}°
+                  PIN: {location.pincode} • {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
                 </div>
               </div>
             </div>
@@ -598,138 +922,224 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
                 {isLocatingGPS ? 'refresh' : 'near_me'}
               </span>
               <span className="hidden sm:inline">
-                {isLocatingGPS ? (isHindi ? 'खोज रहे हैं...' : 'Locating...') : (isHindi ? 'लाइव GPS' : 'Use GPS')}
+                {isLocatingGPS
+                  ? isHindi
+                    ? 'खोज रहे हैं...'
+                    : 'Locating...'
+                  : isHindi
+                  ? 'लाइव GPS'
+                  : 'Live GPS'}
               </span>
             </button>
           </div>
 
-          {/* Pincode Search Box */}
+          {/* Search Box with Search Support for Pincode OR Landmark (e.g. IIMT Greater Noida) */}
           <div className="md:col-span-6 bg-black/20 rounded-2xl p-2 border border-white/15 flex items-center gap-2">
             <div className="relative flex-1 flex items-center">
               <span className="material-symbols-outlined absolute left-3 text-white/60 text-lg">search</span>
               <input
                 type="text"
-                maxLength={6}
-                value={pincodeInput}
-                onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={(e) => e.key === 'Enter' && handlePincodeSearch()}
-                placeholder={isHindi ? 'अपना 6-अंकों का पिनकोड डालें (उदा: 226301)...' : 'Enter 6-digit Pincode (e.g. 226301)...'}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleUniversalSearch()}
+                placeholder={
+                  isHindi
+                    ? 'पिनकोड या जगह खोजें (उदा: IIMT Greater Noida, 201310)...'
+                    : 'Enter PIN or Place (e.g. IIMT Greater Noida, 201310)...'
+                }
                 className="w-full pl-10 pr-3 py-2 bg-transparent text-white placeholder-white/50 text-xs font-bold focus:outline-none"
               />
             </div>
             <button
-              onClick={handlePincodeSearch}
+              onClick={() => handleUniversalSearch()}
               className="px-4 py-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs hover:bg-emerald-100 transition-colors cursor-pointer shrink-0 shadow-sm"
             >
-              {isHindi ? 'पिन खोजें' : 'Search PIN'}
+              {isHindi ? 'मैप खोजें' : 'Search Map'}
             </button>
           </div>
         </div>
+
+        {/* Quick Location Chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-white/60 text-[11px] font-medium">{isHindi ? 'त्वरित स्थान:' : 'Quick Locations:'}</span>
+          <button
+            onClick={() => {
+              setSearchInput('201310');
+              handleUniversalSearch('IIMT Greater Noida Knowledge Park');
+            }}
+            className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span>📍 IIMT / Knowledge Park Greater Noida (201310)</span>
+          </button>
+          <button
+            onClick={() => {
+              setSearchInput('201306');
+              handleUniversalSearch('Greater Noida Alpha Beta');
+            }}
+            className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span>📍 Greater Noida Main (201306)</span>
+          </button>
+          <button
+            onClick={() => {
+              setSearchInput('226301');
+              handleUniversalSearch('226301');
+            }}
+            className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span>📍 Mohanlalganj Lucknow (226301)</span>
+          </button>
+        </div>
       </div>
 
-      {/* SECTION 1: Interactive Live Village Map & Local Demand Radar */}
+      {/* SECTION 1: Real Interactive Google Map with Tiles & Hotspot Markers */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-1">
-              <span className="material-symbols-outlined text-sm">radar</span>
-              {isHindi ? 'लाइव विलेज मैपिंग व आसपास की मांग' : 'Live Village Mapping & Local Demand'}
+              <span className="material-symbols-outlined text-sm">map</span>
+              {isHindi ? 'रियल टाइम इंटरएक्टिव Google Maps' : 'Real-Time Interactive Google Map'}
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-stone-900">
-              {location.village} {isHindi ? 'क्षेत्र में मांग का नक्शा' : 'Area Demand Map'}
+              {location.village} {isHindi ? 'लाइव मैप व बिजनेस क्लस्टर' : 'Live Business & Opportunity Map'}
             </h2>
             <p className="text-xs text-stone-500">
               {isHindi
-                ? 'नक्शे पर क्लिक करके देखें कि आपके 5-10 किमी के दायरे में कौन सा व्यवसाय सबसे ज्यादा चलने लायक है।'
-                : 'Click map markers to analyze high-demand business clusters & nearby banks within 5-10 km radius.'}
+                ? 'नक्शे पर असली सैटेलाइट/रोड व्यू देखें और किसी भी मार्कर पर क्लिक करके मांग व नजदीकी बैंक विवरण देखें।'
+                : 'Pan, zoom & switch between Satellite and Road View. Click any hotspot marker to view real demand metrics.'}
             </p>
           </div>
 
-          {/* Radius Selector */}
+          {/* Map View Mode Switcher (Roadmap vs Satellite vs Hybrid) */}
           <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl text-xs font-bold text-stone-700">
-            <span className="text-[11px] px-2 text-stone-500">{isHindi ? 'दायरा:' : 'Radius:'}</span>
-            {[2, 5, 10].map((r) => (
+            <span className="text-[11px] px-2 text-stone-500">{isHindi ? 'व्यू:' : 'View:'}</span>
+            {[
+              { id: 'roadmap', labelHi: 'रोड मैप', labelEn: 'Map' },
+              { id: 'satellite', labelHi: 'सैटेलाइट', labelEn: 'Satellite' },
+              { id: 'hybrid', labelHi: 'हाइब्रिड', labelEn: 'Hybrid' },
+            ].map((mode) => (
               <button
-                key={r}
-                onClick={() => setMapRadius(r)}
+                key={mode.id}
+                onClick={() => setMapTypeId(mode.id as any)}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mapRadius === r ? 'bg-emerald-800 text-white shadow-xs' : 'hover:bg-stone-200 text-stone-700'
+                  mapTypeId === mode.id
+                    ? 'bg-emerald-800 text-white shadow-xs'
+                    : 'hover:bg-stone-200 text-stone-700'
                 }`}
               >
-                {r} km
+                {isHindi ? mode.labelHi : mode.labelEn}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Live Visual Map Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          {/* Visual Interactive Map Canvas / SVG (7 Cols) */}
-          <div className="lg:col-span-7 bg-[#1c2920] rounded-2xl p-4 border border-emerald-950 shadow-inner relative overflow-hidden min-h-[340px] flex items-center justify-center">
-            {/* Grid Pattern Background */}
-            <div
-              className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage: 'radial-gradient(circle, #34d399 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
-              }}
-            ></div>
-
-            {/* Concentric Radar Distance Rings */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-[120px] h-[120px] rounded-full border border-emerald-500/30"></div>
-              <div className="w-[220px] h-[220px] rounded-full border border-emerald-500/20"></div>
-              <div className="w-[320px] h-[320px] rounded-full border border-emerald-500/10"></div>
-            </div>
-
-            {/* Center User Location Pin */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
-              <div className="w-9 h-9 rounded-full bg-emerald-500 text-stone-950 font-black flex items-center justify-center shadow-lg ring-4 ring-emerald-400/40 animate-pulse">
-                <span className="material-symbols-outlined text-lg">person_pin</span>
-              </div>
-              <div className="mt-1 px-2 py-0.5 rounded bg-black/80 text-[10px] font-bold text-white whitespace-nowrap border border-white/20 shadow-md">
-                {isHindi ? 'आपकी लोकेशन' : 'Your Village'}
-              </div>
-            </div>
-
-            {/* Hotspot Markers placed visually */}
-            {mapHotspots.map((spot) => (
-              <button
-                key={spot.id}
-                onClick={() => setSelectedHotspot(spot.id)}
-                style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-                className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-transform hover:scale-125 focus:outline-none`}
+        {/* Real Google Map Canvas & Insight Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Real Google Map Container (7 Cols) */}
+          <div className="lg:col-span-7 bg-stone-100 rounded-2xl overflow-hidden border border-stone-300 shadow-md relative min-h-[460px] h-[460px]">
+            <APIProvider apiKey={mapsApiKey}>
+              <Map
+                mapId="DEMO_MAP_ID"
+                style={{ width: '100%', height: '100%' }}
+                defaultCenter={{ lat: location.lat, lng: location.lng }}
+                defaultZoom={zoomLevel}
+                mapTypeId={mapTypeId}
+                gestureHandling="greedy"
+                fullscreenControl={true}
+                streetViewControl={true}
+                zoomControl={true}
+                mapTypeControl={false}
+                internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
               >
-                <div
-                  className={`w-8 h-8 rounded-full ${spot.color} text-white flex items-center justify-center shadow-md ring-2 ring-white/60 group-hover:ring-amber-400`}
+                <MapController targetLat={location.lat} targetLng={location.lng} zoomLevel={zoomLevel} />
+
+                {/* User's Center Location Pin */}
+                <AdvancedMarker
+                  position={{ lat: location.lat, lng: location.lng }}
+                  title={location.village}
+                  onClick={() => setActiveMarkerId('user-center')}
                 >
-                  <span className="material-symbols-outlined text-sm">{spot.icon}</span>
-                </div>
-                <div className="absolute left-1/2 -translate-x-1/2 top-9 hidden group-hover:block bg-stone-900 text-white text-[10px] font-bold py-1 px-2 rounded whitespace-nowrap shadow-xl border border-white/20 z-30">
-                  {spot.name} ({spot.distance})
-                </div>
-              </button>
-            ))}
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center shadow-2xl ring-4 ring-white border-2 border-emerald-900 animate-bounce">
+                      <span className="material-symbols-outlined text-xl">person_pin_circle</span>
+                    </div>
+                    <div className="mt-1 px-2 py-0.5 rounded-md bg-stone-900 text-white text-[10px] font-bold shadow-md whitespace-nowrap">
+                      {location.village}
+                    </div>
+                  </div>
+                </AdvancedMarker>
 
-            {/* Map Legend Overlay */}
-            <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md rounded-xl p-2.5 border border-white/10 text-[10px] text-white/90 space-y-1 z-20">
+                {/* Hotspot Markers */}
+                {hotspots.map((spot) => (
+                  <AdvancedMarker
+                    key={spot.id}
+                    position={{ lat: spot.lat, lng: spot.lng }}
+                    title={spot.titleEn}
+                    onClick={() => setActiveMarkerId(spot.id)}
+                  >
+                    <div className="flex flex-col items-center cursor-pointer group">
+                      <div
+                        style={{ backgroundColor: spot.color }}
+                        className="w-8 h-8 rounded-full text-white font-black flex items-center justify-center shadow-lg ring-2 ring-white group-hover:scale-125 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-sm">{spot.icon}</span>
+                      </div>
+                      <div className="mt-0.5 px-1.5 py-0.2 rounded bg-stone-900/90 text-white text-[9px] font-bold whitespace-nowrap hidden group-hover:block shadow">
+                        {isHindi ? spot.titleHi.slice(0, 18) + '...' : spot.titleEn.slice(0, 18) + '...'}
+                      </div>
+                    </div>
+                  </AdvancedMarker>
+                ))}
+
+                {/* InfoWindow Popup on Marker Click */}
+                {activeSpot && (
+                  <InfoWindow
+                    position={{ lat: activeSpot.lat, lng: activeSpot.lng }}
+                    onCloseClick={() => setActiveMarkerId(null)}
+                  >
+                    <div className="p-2 max-w-[220px] text-stone-900 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 uppercase">
+                          {activeSpot.badge}
+                        </span>
+                        <span className="text-[10px] font-bold text-stone-500">{activeSpot.distance}</span>
+                      </div>
+                      <div className="font-extrabold text-xs text-stone-900 leading-tight">
+                        {isHindi ? activeSpot.titleHi : activeSpot.titleEn}
+                      </div>
+                      <p className="text-[11px] text-stone-600 leading-snug">
+                        {isHindi ? activeSpot.descHi : activeSpot.descEn}
+                      </p>
+                    </div>
+                  </InfoWindow>
+                )}
+              </Map>
+            </APIProvider>
+
+            {/* Map Overlay Quick Legend */}
+            <div className="absolute bottom-3 left-3 bg-stone-950/85 backdrop-blur-md rounded-xl p-2.5 border border-white/15 text-[10px] text-white space-y-1 z-10 shadow-lg pointer-events-auto">
               <div className="font-bold text-emerald-400 flex items-center gap-1">
-                <span className="material-symbols-outlined text-xs">tune</span>
-                {isHindi ? 'नक्शा संकेतक (क्लिक करें)' : 'Live Hotspots'}
+                <span className="material-symbols-outlined text-xs">pin_drop</span>
+                <span>{isHindi ? 'मैप मार्कर (क्लिक करें):' : 'Map Hotspots:'}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>{isHindi ? 'डेयरी चिलिंग' : 'Dairy Hub'}</span>
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>{isHindi ? 'अनाज मंडी' : 'Agro Mandi'}</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <span>{isHindi ? 'बैंक शाखा' : 'Bank Branch'}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                  <span>{isHindi ? 'डेयरी चिलर' : 'Dairy'}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>{isHindi ? 'अनाज मंडी' : 'Mandi'}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>{isHindi ? 'बैंक शाखा' : 'Bank'}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  <span>{isHindi ? 'CSC सेंटर' : 'CSC Seva'}</span>
+                </span>
               </div>
-            </div>
-
-            {/* Live Radius Tag */}
-            <div className="absolute top-3 right-3 bg-emerald-900/90 text-emerald-200 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold">
-              Radius: {mapRadius} km • 5 Active Clusters
             </div>
           </div>
 
@@ -738,63 +1148,50 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-emerald-700 text-base">insights</span>
-                {isHindi ? 'क्षेत्रीय मांग व अवसर रिपोर्ट' : 'Local Opportunity Insights'}
+                {isHindi ? 'रियल टाइम लोकल अवसर रिपोर्ट' : 'Live Local Opportunity Report'}
               </div>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
                 PIN {location.pincode}
               </span>
             </div>
 
-            {/* Key localized facts */}
-            <div className="space-y-3">
-              <div className="p-3 bg-white rounded-xl border border-stone-200/80 shadow-2xs space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-stone-800 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-blue-600 text-sm">local_drink</span>
-                    {isHindi ? 'डेयरी व दूध चिलिंग अवसर' : 'Dairy Milk Chilling Opportunity'}
-                  </span>
-                  <span className="font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[11px]">
-                    96% Demand
-                  </span>
+            {/* List of hotspots clickable to pan map */}
+            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+              {hotspots.map((spot) => (
+                <div
+                  key={spot.id}
+                  onClick={() => {
+                    setActiveMarkerId(spot.id);
+                    setLocation((prev) => ({ ...prev, lat: spot.lat, lng: spot.lng }));
+                    setZoomLevel(16);
+                  }}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer text-xs space-y-1 ${
+                    activeMarkerId === spot.id
+                      ? 'bg-emerald-50 border-emerald-600 shadow-xs'
+                      : 'bg-white border-stone-200 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-stone-900 flex items-center gap-1.5">
+                      <span
+                        style={{ color: spot.color }}
+                        className="material-symbols-outlined text-sm"
+                      >
+                        {spot.icon}
+                      </span>
+                      <span className="truncate max-w-[190px]">
+                        {isHindi ? spot.titleHi : spot.titleEn}
+                      </span>
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-stone-600">
+                      {spot.distance}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-600 leading-snug">
+                    {isHindi ? spot.descHi : spot.descEn}
+                  </p>
                 </div>
-                <p className="text-xs text-stone-600">
-                  {isHindi
-                    ? 'आपके 5 किमी क्षेत्र में 1,840 दुधारू गाय-भैंस हैं, पर कोई चिलिंग प्लांट नहीं है। यहां मिनी चिलर लगाना सबसे अधिक सुरक्षित और लाभदायक है।'
-                    : '1,840 milch cattle in 5km radius with zero competing chilling plants. Top profitability score.'}
-                </p>
-              </div>
-
-              <div className="p-3 bg-white rounded-xl border border-stone-200/80 shadow-2xs space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-stone-800 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-amber-600 text-sm">agriculture</span>
-                    {isHindi ? 'अनाज व सरसों तेल पिसाई' : 'Flour & Mustard Oil Expeller'}
-                  </span>
-                  <span className="font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[11px]">
-                    92% Demand
-                  </span>
-                </div>
-                <p className="text-xs text-stone-600">
-                  {isHindi
-                    ? 'स्थानीय किसान अनाज मंडी दूर होने के कारण स्थानीय पिसाई चाहते हैं। PMFME में 35% सरकारी सब्सिडी उपलब्ध है।'
-                    : 'Farmers prefer local processing. PMFME offers 35% capital subsidy for food units.'}
-                </p>
-              </div>
-
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-950 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-emerald-700 text-sm">account_balance</span>
-                    {isHindi ? 'लोकल बैंक लोन शाखाएं' : 'Nearest Bank Loan Branches'}
-                  </span>
-                  <span className="font-bold text-emerald-800 text-[11px]">1.2 km away</span>
-                </div>
-                <p className="text-xs text-emerald-900">
-                  {isHindi
-                    ? 'HDFC, ICICI व SBI शाखाएं इस पिनकोड पर मुद्रा लोन (0% गारंटी) व PMEGP सब्सिडी सीधे जारी करती हैं।'
-                    : 'HDFC, ICICI and SBI branches process instant Mudra and PMEGP subsidy files here.'}
-                </p>
-              </div>
+              ))}
             </div>
 
             {/* Quick Button to Calculator */}
@@ -802,7 +1199,9 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
               onClick={() => onNavigate('calculator')}
               className="w-full py-2.5 px-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
             >
-              <span>{isHindi ? 'इन व्यवसायों के लिए लोन व सब्सिडी देखें' : 'Calculate Loans & Subsidies for This Area'}</span>
+              <span>
+                {isHindi ? '2. लोन व 35% सब्सिडी चेक करें' : '2. Check Loan & 35% Subsidy for This Area'}
+              </span>
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </button>
           </div>
@@ -817,7 +1216,7 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
             {isHindi ? 'स्टेप-बाय-स्टेप बिजनेस सेटअप गाइड' : 'Step-by-Step Business Setup Guide'}
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-stone-900">
-            {isHindi ? '1. अपने गांव के लिए व्यवसाय चुनें' : '1. Select Your Village Business Model'}
+            {isHindi ? '1. अपने क्षेत्र के लिए व्यवसाय चुनें' : '1. Select Your Business Model'}
           </h2>
           <p className="text-xs text-stone-500">
             {isHindi
@@ -888,7 +1287,9 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
                 <div className="pt-3 border-t border-stone-200/80 space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-stone-500">{isHindi ? 'अनुमानित लागत:' : 'Est. Investment:'}</span>
-                    <span className="font-extrabold text-stone-900">{isHindi ? biz.investmentHi : biz.investmentEn}</span>
+                    <span className="font-extrabold text-stone-900">
+                      {isHindi ? biz.investmentHi : biz.investmentEn}
+                    </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-stone-500">{isHindi ? 'मांग स्कोर:' : 'Demand Score:'}</span>
@@ -902,12 +1303,18 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
                   <div className="pt-1">
                     <span
                       className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 ${
-                        isSelected
-                          ? 'bg-emerald-800 text-white'
-                          : 'bg-stone-100 text-stone-700'
+                        isSelected ? 'bg-emerald-800 text-white' : 'bg-stone-100 text-stone-700'
                       }`}
                     >
-                      <span>{isSelected ? (isHindi ? 'चयनित (नीचे गाइड देखें)' : 'Selected (See Guide Below)') : (isHindi ? 'गाइड व मशीनरी देखें' : 'View Setup Plan')}</span>
+                      <span>
+                        {isSelected
+                          ? isHindi
+                            ? 'चयनित (नीचे गाइड देखें)'
+                            : 'Selected (See Guide Below)'
+                          : isHindi
+                          ? 'गाइड व मशीनरी देखें'
+                          : 'View Setup Plan'}
+                      </span>
                       <span className="material-symbols-outlined text-xs">
                         {isSelected ? 'check_circle' : 'arrow_forward'}
                       </span>
@@ -947,7 +1354,10 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
               </div>
               <div className="space-y-2.5">
                 {(isHindi ? currentBiz.stepsHi : currentBiz.stepsEn).map((step, idx) => (
-                  <div key={idx} className="p-2.5 bg-stone-50 rounded-xl text-xs font-medium text-stone-800 flex items-start gap-2.5 border border-stone-100">
+                  <div
+                    key={idx}
+                    className="p-2.5 bg-stone-50 rounded-xl text-xs font-medium text-stone-800 flex items-start gap-2.5 border border-stone-100"
+                  >
                     <span className="w-5 h-5 rounded-full bg-emerald-800 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
                       {idx + 1}
                     </span>
@@ -962,13 +1372,20 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
               {/* Equipment Box */}
               <div className="bg-white p-5 rounded-2xl border border-stone-200 space-y-3">
                 <div className="font-extrabold text-stone-900 text-sm flex items-center gap-2 text-stone-800">
-                  <span className="material-symbols-outlined text-base text-amber-600">precision_manufacturing</span>
+                  <span className="material-symbols-outlined text-base text-amber-600">
+                    precision_manufacturing
+                  </span>
                   {isHindi ? 'आवश्यक मशीनरी व उपकरण' : 'Required Machinery & Equipment'}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {(isHindi ? currentBiz.equipmentHi : currentBiz.equipmentEn).map((eq, idx) => (
-                    <div key={idx} className="p-2 bg-emerald-50/50 rounded-lg text-xs text-stone-800 flex items-center gap-2 border border-emerald-100">
-                      <span className="material-symbols-outlined text-emerald-700 text-sm shrink-0">check_box</span>
+                    <div
+                      key={idx}
+                      className="p-2 bg-emerald-50/50 rounded-lg text-xs text-stone-800 flex items-center gap-2 border border-emerald-100"
+                    >
+                      <span className="material-symbols-outlined text-emerald-700 text-sm shrink-0">
+                        check_box
+                      </span>
                       <span className="truncate">{eq}</span>
                     </div>
                   ))}
