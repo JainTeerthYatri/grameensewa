@@ -87,8 +87,7 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
   onShowToast,
 }) => {
   const isHindi = currentLanguage === 'hi';
-  const mapsApiKey =
-    import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDbFI42opvYum1OzHkQsJ0lx2lQEKRyPmk';
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   // Live Location & Pincode State - defaults to IIMT Greater Noida / Knowledge Park
   const [location, setLocation] = useState<LocationInfo>({
