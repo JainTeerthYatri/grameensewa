@@ -61,44 +61,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-surface shadow-xs border-b border-surface-variant/70">
-      {/* Top Community Bar */}
-      <div className="bg-[#142918] text-white text-xs py-1.5 px-4 sm:px-8 flex flex-wrap justify-between items-center border-b-2 border-emerald-500">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-            <span className="font-bold tracking-wider text-[11px] ml-1 text-emerald-100">
-              GramMitra • {isHindi ? 'ग्रामीण व्यवसाय व डिजिटल सेवा पोर्टल' : 'Rural Business & Digital Guide Portal'}
-            </span>
-          </div>
-          <span className="hidden md:inline text-white/40">|</span>
-          <span className="hidden md:inline text-[11px] text-white/80">
-            {isHindi ? 'आसान भाषा में बिज़नेस सेटअप, लोन सब्सिडी व दुकान बही-खाता' : 'Simple Setup Guide, Bank Loan Comparison & Shop Khata'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 text-[11px]">
-          <button
-            onClick={onToggleHighContrast}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors cursor-pointer ${
-              highContrast ? 'bg-primary-fixed text-primary font-bold' : 'hover:bg-white/10 text-white/80'
-            }`}
-            title="Toggle Accessibility High Contrast"
-          >
-            <span className="material-symbols-outlined text-[14px]">contrast</span>
-            <span>{strings.contrastMode}</span>
-          </button>
-          <button
-            onClick={onOpenLanguageModal}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-white/10 hover:bg-white/20 transition-colors font-medium text-white border border-white/20 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[14px]">translate</span>
-            <span className="font-bold">{currentLangObj.nativeName}</span>
-            <span className="text-white/60 text-[10px]">({currentLangObj.englishName})</span>
-            <span className="material-symbols-outlined text-[12px]">arrow_drop_down</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main Brand & Identity Row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">

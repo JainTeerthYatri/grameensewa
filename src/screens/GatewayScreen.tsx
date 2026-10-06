@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenType, SupportedLanguage } from '../types';
+import { LandingIntroSlider } from '../components/LandingIntroSlider';
 import {
   APIProvider,
   Map,
@@ -847,6 +848,9 @@ export const GatewayScreen: React.FC<GatewayScreenProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-8 pb-24">
+      {/* Animated Landing Introduction Slider */}
+      <LandingIntroSlider onGetStarted={() => { window.scrollTo({ top: 480, behavior: 'smooth' }); }} />
+
       {/* Hero Header with Location & Pincode Bar */}
       <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg border border-emerald-700/50">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
