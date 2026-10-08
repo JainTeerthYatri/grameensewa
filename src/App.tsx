@@ -3,11 +3,12 @@ import { AuthUser, ScreenType, SupportedLanguage } from './types';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LanguageModal } from './components/LanguageModal';
+import { DPDPSafetyModal } from './components/DPDPSafetyModal';
+import { LandingPage } from './screens/LandingPage';
 import { LoginScreen } from './screens/LoginScreen';
 import { KhataScreen } from './screens/KhataScreen';
 import { GatewayScreen } from './screens/GatewayScreen';
 import { CalculatorScreen } from './screens/CalculatorScreen';
-import { VOICE_TEXT } from './data/translations';
 
 interface ToastMessage {
   id: string;
@@ -29,9 +30,16 @@ export function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     try {
       const saved = localStorage.getItem('grammitra_auth_user');
-      if (!saved) return 'login';
       const hash = window.location.hash.replace('#', '') as ScreenType;
+      
+      if (!saved) {
+        if (hash === 'login') return 'login';
+        return 'landing';
+      }
+
       const validScreens: ScreenType[] = [
+        'landing',
+        'login',
         'gateway',
         'calculator',
         'khata',
@@ -43,18 +51,28 @@ export function App() {
       if (hash === 'cluster-map') return 'gateway';
       return validScreens.includes(hash) ? hash : 'gateway';
     } catch {
-      return 'login';
+      return 'landing';
     }
   });
 
-  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>('en');
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(() => {
+    try {
+      const saved = localStorage.getItem('grammitra_lang');
+      return (saved as SupportedLanguage) || 'hi';
+    } catch {
+      return 'hi';
+    }
+  });
+
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isDpdpModalOpen, setIsDpdpModalOpen] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
 
   const handleSelectLanguage = (lang: SupportedLanguage) => {
     setCurrentLanguage(lang);
+    localStorage.setItem('grammitra_lang', lang);
     showToast(lang === 'hi' ? 'भाषा बदलकर हिंदी कर दी गई है' : `Language updated to ${lang.toUpperCase()}`, 'info');
   };
 
@@ -70,11 +88,11 @@ export function App() {
         setCurrentScreen('gateway');
         return;
       }
-      const validScreens: ScreenType[] = ['login', 'gateway', 'calculator', 'khata'];
+      const validScreens: ScreenType[] = ['landing', 'login', 'gateway', 'calculator', 'khata'];
       if (validScreens.includes(hash)) {
-        if (!currentUser && hash !== 'login') {
-          setCurrentScreen('login');
-          window.location.hash = 'login';
+        if (!currentUser && hash !== 'login' && hash !== 'landing') {
+          setCurrentScreen('landing');
+          window.location.hash = 'landing';
         } else {
           setCurrentScreen(hash);
         }
@@ -90,14 +108,13 @@ export function App() {
   }, [currentUser]);
 
   const navigateTo = (screen: ScreenType) => {
-    if (!currentUser && screen !== 'login') {
-      setCurrentScreen('login');
-      window.location.hash = 'login';
-      showToast(currentLanguage === 'hi' ? 'कृपया पहले लॉगिन करें' : 'Please sign in first to access this module', 'warning');
+    if (!currentUser && screen !== 'login' && screen !== 'landing') {
+      setCurrentScreen('landing');
+      window.location.hash = 'landing';
+      showToast(currentLanguage === 'hi' ? 'कृपया पहले पोर्टल का परिचय देखें या साइन इन करें' : 'Please explore the landing features or sign in first', 'warning');
       return;
     }
 
-    // Direct routing to the 3 clean modules
     let target = screen;
     if (screen === 'feasibility' || screen === 'loan-simulator') target = 'calculator';
     if (screen === 'cluster-map') target = 'gateway';
@@ -116,8 +133,8 @@ export function App() {
   const handleLogout = () => {
     localStorage.removeItem('grammitra_auth_user');
     setCurrentUser(null);
-    setCurrentScreen('login');
-    window.location.hash = 'login';
+    setCurrentScreen('landing');
+    window.location.hash = 'landing';
     showToast(currentLanguage === 'hi' ? 'सफलतापूर्वक लॉगआउट हुआ' : 'Signed out successfully.', 'info');
   };
 
@@ -178,60 +195,72 @@ export function App() {
     }
   };
 
-  const voiceStrings = VOICE_TEXT[currentLanguage] || VOICE_TEXT.hi;
-
   return (
     <div className={`min-h-screen flex flex-col bg-surface text-on-surface ${highContrast ? 'contrast-more' : ''}`}>
-      {/* Universal Sovereign Header */}
-      <Header
-        currentScreen={currentScreen}
-        onNavigate={navigateTo}
-        currentLanguage={currentLanguage}
-        onSelectLanguage={handleSelectLanguage}
-        onOpenLanguageModal={() => setIsLanguageModalOpen(false)}
-        highContrast={highContrast}
-        onToggleHighContrast={toggleHighContrast}
-        onOpenVoiceAssistant={() => setShowVoiceAssistant(true)}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
-
-      {/* Main Screen Content Viewport - 3 Clean Sections */}
-      <main className="flex-1">
-        {currentScreen === 'login' && (
-          <LoginScreen
-            onLoginSuccess={handleLoginSuccess}
-            currentLanguage={currentLanguage}
-            onShowToast={showToast}
-          />
-        )}
-        {(currentScreen === 'gateway' || currentScreen === 'cluster-map') && (
-          <GatewayScreen
+      {/* If on landing screen, show standalone landing experience */}
+      {currentScreen === 'landing' ? (
+        <LandingPage
+          onNavigate={navigateTo}
+          currentLanguage={currentLanguage}
+          onSelectLanguage={handleSelectLanguage}
+          onOpenDpdpModal={() => setIsDpdpModalOpen(true)}
+          onShowToast={showToast}
+        />
+      ) : (
+        <>
+          {/* Universal Sovereign Header */}
+          <Header
+            currentScreen={currentScreen}
             onNavigate={navigateTo}
             currentLanguage={currentLanguage}
             onSelectLanguage={handleSelectLanguage}
-            onShowToast={showToast}
+            onOpenLanguageModal={() => setIsLanguageModalOpen(true)}
+            onOpenDpdpModal={() => setIsDpdpModalOpen(true)}
+            highContrast={highContrast}
+            onToggleHighContrast={toggleHighContrast}
+            onOpenVoiceAssistant={() => setShowVoiceAssistant(true)}
+            currentUser={currentUser}
+            onLogout={handleLogout}
           />
-        )}
-        {(currentScreen === 'calculator' || currentScreen === 'feasibility' || currentScreen === 'loan-simulator') && (
-          <CalculatorScreen
-            onNavigate={navigateTo}
-            currentLanguage={currentLanguage}
-            onShowToast={showToast}
-          />
-        )}
-        {currentScreen === 'khata' && (
-          <KhataScreen
-            onNavigate={navigateTo}
-            currentLanguage={currentLanguage}
-            onSelectLanguage={handleSelectLanguage}
-            onShowToast={showToast}
-          />
-        )}
-      </main>
 
-      {/* Universal Clean Footer */}
-      <Footer onNavigate={navigateTo} currentLanguage={currentLanguage} />
+          {/* Main Screen Content Viewport */}
+          <main className="flex-1">
+            {currentScreen === 'login' && (
+              <LoginScreen
+                onLoginSuccess={handleLoginSuccess}
+                currentLanguage={currentLanguage}
+                onShowToast={showToast}
+              />
+            )}
+            {(currentScreen === 'gateway' || currentScreen === 'cluster-map') && (
+              <GatewayScreen
+                onNavigate={navigateTo}
+                currentLanguage={currentLanguage}
+                onSelectLanguage={handleSelectLanguage}
+                onShowToast={showToast}
+              />
+            )}
+            {(currentScreen === 'calculator' || currentScreen === 'feasibility' || currentScreen === 'loan-simulator') && (
+              <CalculatorScreen
+                onNavigate={navigateTo}
+                currentLanguage={currentLanguage}
+                onShowToast={showToast}
+              />
+            )}
+            {currentScreen === 'khata' && (
+              <KhataScreen
+                onNavigate={navigateTo}
+                currentLanguage={currentLanguage}
+                onSelectLanguage={handleSelectLanguage}
+                onShowToast={showToast}
+              />
+            )}
+          </main>
+
+          {/* Universal Clean Footer */}
+          <Footer onNavigate={navigateTo} currentLanguage={currentLanguage} />
+        </>
+      )}
 
       {/* 12-Language Selector Modal */}
       <LanguageModal
@@ -239,6 +268,14 @@ export function App() {
         onClose={() => setIsLanguageModalOpen(false)}
         currentLanguage={currentLanguage}
         onSelectLanguage={handleSelectLanguage}
+      />
+
+      {/* DPDP Act Citizen Data Rights & Safety Modal */}
+      <DPDPSafetyModal
+        isOpen={isDpdpModalOpen}
+        onClose={() => setIsDpdpModalOpen(false)}
+        currentLanguage={currentLanguage}
+        onShowToast={showToast}
       />
 
       {/* Voice Assistant Modal */}

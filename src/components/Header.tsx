@@ -8,6 +8,7 @@ interface HeaderProps {
   currentLanguage: SupportedLanguage;
   onSelectLanguage?: (lang: SupportedLanguage) => void;
   onOpenLanguageModal: () => void;
+  onOpenDpdpModal?: () => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
   onOpenVoiceAssistant?: () => void;
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentLanguage,
   onSelectLanguage,
   onOpenLanguageModal,
+  onOpenDpdpModal,
   highContrast,
   onToggleHighContrast,
   onOpenVoiceAssistant,
@@ -105,6 +107,17 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </select>
           </div>
+
+          {onOpenDpdpModal && (
+            <button
+              onClick={onOpenDpdpModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-xs font-semibold text-emerald-900 transition-colors cursor-pointer"
+              title="DPDP Act Citizen Data Rights"
+            >
+              <span className="material-symbols-outlined text-emerald-700 text-base">gpp_good</span>
+              <span className="hidden md:inline">{isHindi ? 'डेटा सुरक्षा (DPDP)' : 'DPDP Rights'}</span>
+            </button>
+          )}
 
           {onOpenVoiceAssistant && (
             <button

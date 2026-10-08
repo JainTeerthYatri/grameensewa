@@ -1,4 +1,5 @@
 export type ScreenType =
+  | 'landing'
   | 'login'
   | 'gateway'
   | 'calculator'
