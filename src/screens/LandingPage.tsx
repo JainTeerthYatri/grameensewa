@@ -29,7 +29,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         : 'Using live satellite maps and 6-digit PIN codes, find out which rural business ventures (Dairy, Solar Kiosk, Flour Mill, Kirana) have maximum local demand and zero competition within a 10km radius.',
       stats: '98.4% Demand Accuracy',
       icon: 'explore',
-      color: 'from-emerald-950 via-emerald-900 to-stone-900',
+      bgImage: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&q=80',
     },
     {
       badge: isHindi ? '💰 35% सरकारी सब्सिडी और टॉप बैंक लोन' : '💰 35% Govt Subsidies & Top Bank Loans',
@@ -39,7 +39,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         : 'Calculate capital subsidies up to 35% under PMEGP, PMFME, and NABARD. Compare live interest rates starting at 8.65% with zero collateral requirements up to ₹10 Lakh.',
       stats: 'Up to ₹10 Lakh Collateral-Free',
       icon: 'account_balance',
-      color: 'from-stone-950 via-emerald-950 to-emerald-900',
+      bgImage: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
     },
     {
       badge: isHindi ? '📒 डिजिटल दुकान बही-खाता व नकद गल्ला' : '📒 Digital Shop Bahi-Khata & Cashbook',
@@ -49,7 +49,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         : 'Keep track of daily customer credit, cash collections, and supplier payments in one secure place. Send instant payment reminders via WhatsApp with automated digital ledgers.',
       stats: '₹120Cr+ Transactions Managed',
       icon: 'menu_book',
-      color: 'from-emerald-900 via-stone-900 to-emerald-950',
+      bgImage: 'https://images.unsplash.com/photo-1556742049-0a67d553c299?auto=format&fit=crop&w=1200&q=80',
     },
   ];
 
@@ -112,13 +112,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Hero Animated Slideshow Section */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 py-10 sm:py-14 space-y-16">
-        <div className={`rounded-3xl p-8 sm:p-14 text-white shadow-2xl border border-white/10 relative overflow-hidden transition-all duration-700 bg-linear-to-r ${slide.color}`}>
-          {/* Animated Background Layers */}
-          <div className="absolute -right-20 -top-20 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-          <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="rounded-3xl p-8 sm:p-14 text-white shadow-2xl border border-white/20 relative overflow-hidden transition-all duration-700 group">
+          {/* Background Image with Cinematic Zoom & Shade */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <img
+              src={slide.bgImage}
+              alt="Slide background"
+              className="w-full h-full object-cover animate-slide-zoom filter brightness-75 contrast-110"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-stone-950/95 via-emerald-950/85 to-stone-900/80 backdrop-blur-xs"></div>
+          </div>
 
-          <div className="max-w-3xl space-y-6 relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-300 shadow-sm animate-fade-in">
+          {/* Animated Background Glowing Orbs */}
+          <div className="absolute -right-20 -top-20 w-96 h-96 bg-emerald-500/30 rounded-full blur-3xl pointer-events-none animate-pulse z-1"></div>
+          <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-amber-500/25 rounded-full blur-3xl pointer-events-none z-1"></div>
+
+          <div className="max-w-3xl space-y-6 relative z-10 animate-float-bounce">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-emerald-300 shadow-md">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
               <span>{slide.badge}</span>
             </div>
@@ -127,25 +137,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight transition-all duration-500">
                 {slide.title}
               </h1>
-              <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed max-w-2xl transition-all duration-500">
+              <p className="text-sm sm:text-base text-emerald-100/95 leading-relaxed max-w-2xl transition-all duration-500">
                 {slide.description}
               </p>
             </div>
 
             {/* Slide Indicators & Action Buttons */}
-            <div className="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-t border-white/15">
+            <div className="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-t border-white/20">
               <div className="flex items-center gap-3">
                 {heroSlides.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveSlide(idx)}
                     className={`h-2.5 rounded-full transition-all cursor-pointer ${
-                      activeSlide === idx ? 'w-12 bg-amber-400 shadow-md' : 'w-2.5 bg-white/30 hover:bg-white/50'
+                      activeSlide === idx ? 'w-12 bg-amber-400 shadow-lg' : 'w-2.5 bg-white/30 hover:bg-white/50'
                     }`}
                     aria-label={`Slide ${idx + 1}`}
                   />
                 ))}
-                <span className="text-xs text-emerald-300 font-mono ml-3 font-bold px-2.5 py-1 rounded-md bg-white/10">
+                <span className="text-xs text-emerald-300 font-mono ml-3 font-bold px-2.5 py-1 rounded-md bg-white/15 backdrop-blur-sm shadow-xs">
                   {slide.stats}
                 </span>
               </div>
@@ -153,7 +163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => onNavigate('login')}
-                  className="px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer hover:scale-105"
+                  className="px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-2xl transition-all cursor-pointer hover:scale-105 active:scale-95"
                 >
                   <span>{isHindi ? 'पोर्टल में प्रवेश करें (Sign In)' : 'Enter Portal & Sign In'}</span>
                   <span className="material-symbols-outlined text-base">arrow_forward</span>
