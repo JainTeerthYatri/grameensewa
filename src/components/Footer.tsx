@@ -7,7 +7,7 @@ interface FooterProps {
   currentLanguage?: SupportedLanguage;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, currentLanguage = 'hi' }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, currentLanguage = 'en' }) => {
   const isHindi = currentLanguage === 'hi';
   const ui = UI_STRINGS[currentLanguage] || UI_STRINGS.en;
 

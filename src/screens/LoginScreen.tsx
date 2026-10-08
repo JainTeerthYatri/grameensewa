@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthUser, SupportedLanguage } from '../types';
+import { supabase, isSupabaseConfigured, updateSupabaseCredentials } from '../utils/supabaseClient';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -50,7 +51,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
-  // Login form state - starts empty as requested
+  // Login form state - starts empty
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginDpdpChecked, setLoginDpdpChecked] = useState(false);
@@ -68,6 +69,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Supabase Config Modal state
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
+  const [sbUrlInput, setSbUrlInput] = useState('');
+  const [sbKeyInput, setSbKeyInput] = useState('');
+
   const getStoredAccounts = (): RegisteredUserAccount[] => {
     try {
       const saved = localStorage.getItem('grammitra_registered_users');
@@ -81,8 +87,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     return INITIAL_ACCOUNTS;
   };
 
-  // Single-click login verification
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Sign In handler (Supports Supabase Auth + Local Fallback)
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -102,44 +108,87 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const accounts = getStoredAccounts();
-      const matched = accounts.find((a) => a.email.toLowerCase() === emailTrim);
+    try {
+      if (isSupabaseConfigured()) {
+        // Authenticate via Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailTrim,
+          password: passTrim,
+        });
 
-      if (!matched) {
-        setIsLoading(false);
-        setErrorMessage(`No account found for "${emailTrim}". Please register first.`);
-        onShowToast('Account not found. Please register.', 'warning');
-        return;
+        if (error) {
+          // Fallback to local accounts if Supabase auth errors out (e.g. user created locally)
+          console.warn('Supabase auth error, checking local accounts:', error.message);
+          verifyLocalAccount(emailTrim, passTrim);
+          return;
+        }
+
+        if (data.user) {
+          const userMeta = data.user.user_metadata || {};
+          const authUser: AuthUser = {
+            email: data.user.email || emailTrim,
+            name: userMeta.name || emailTrim.split('@')[0],
+            role: userMeta.role || 'Village Entrepreneur',
+            citizenId: userMeta.citizenId || `GM-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+            panchayat: userMeta.panchayat || 'Rampur Kalan',
+            district: userMeta.district || 'Lucknow',
+            state: userMeta.state || 'Uttar Pradesh',
+            loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+
+          localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
+          setIsLoading(false);
+          onShowToast(`Welcome back via Supabase, ${authUser.name}!`, 'success');
+          onLoginSuccess(authUser);
+          return;
+        }
       }
 
-      if (matched.password !== passTrim) {
-        setIsLoading(false);
-        setErrorMessage('Incorrect password. Please verify your credentials.');
-        onShowToast('Incorrect password', 'warning');
-        return;
-      }
-
+      // If Supabase is not configured, verify against local accounts
+      verifyLocalAccount(emailTrim, passTrim);
+    } catch (err: any) {
       setIsLoading(false);
-      const authUser: AuthUser = {
-        email: matched.email,
-        name: matched.name,
-        role: matched.role,
-        citizenId: matched.citizenId,
-        panchayat: matched.panchayat,
-        district: matched.district,
-        state: matched.state,
-        loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
-      onShowToast(`Welcome back, ${authUser.name}!`, 'success');
-      onLoginSuccess(authUser);
-    }, 500);
+      setErrorMessage(err.message || 'Authentication error occurred.');
+    }
   };
 
-  // Single-click registration
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const verifyLocalAccount = (emailTrim: string, passTrim: string) => {
+    const accounts = getStoredAccounts();
+    const matched = accounts.find((a) => a.email.toLowerCase() === emailTrim);
+
+    if (!matched) {
+      setIsLoading(false);
+      setErrorMessage(`No account found for "${emailTrim}". Please register first.`);
+      onShowToast('Account not found. Please register.', 'warning');
+      return;
+    }
+
+    if (matched.password !== passTrim) {
+      setIsLoading(false);
+      setErrorMessage('Incorrect password. Please verify your credentials.');
+      onShowToast('Incorrect password', 'warning');
+      return;
+    }
+
+    setIsLoading(false);
+    const authUser: AuthUser = {
+      email: matched.email,
+      name: matched.name,
+      role: matched.role,
+      citizenId: matched.citizenId,
+      panchayat: matched.panchayat,
+      district: matched.district,
+      state: matched.state,
+      loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
+    onShowToast(`Welcome back, ${authUser.name}!`, 'success');
+    onLoginSuccess(authUser);
+  };
+
+  // Register handler (Supports Supabase Auth + Local Fallback)
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -168,49 +217,106 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const accounts = getStoredAccounts();
-      const existing = accounts.find((a) => a.email.toLowerCase() === emailTrim);
+    try {
+      const citizenId = `GM-2026-${regState.slice(0, 2).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      if (existing) {
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase.auth.signUp({
+          email: emailTrim,
+          password: passTrim,
+          options: {
+            data: {
+              name: nameTrim,
+              role: regRole,
+              panchayat: panchayatTrim,
+              district: regDistrict,
+              state: regState,
+              citizenId,
+              dpdpConsent: true,
+            },
+          },
+        });
+
+        if (error) {
+          console.warn('Supabase sign-up error, registering locally:', error.message);
+          registerLocally(nameTrim, emailTrim, passTrim, panchayatTrim, citizenId);
+          return;
+        }
+
         setIsLoading(false);
-        setErrorMessage(`An account with email "${emailTrim}" already exists. Please sign in.`);
-        onShowToast('Account already exists', 'warning');
+        onShowToast('Account registered securely via Supabase under DPDP Act!', 'success');
+
+        const authUser: AuthUser = {
+          email: emailTrim,
+          name: nameTrim,
+          role: regRole,
+          citizenId,
+          panchayat: panchayatTrim,
+          district: regDistrict,
+          state: regState,
+          loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
+        onLoginSuccess(authUser);
         return;
       }
 
-      const newAccount: RegisteredUserAccount = {
-        email: emailTrim,
-        password: passTrim,
-        name: nameTrim,
-        role: regRole,
-        citizenId: `GM-2026-${regState.slice(0, 2).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
-        panchayat: panchayatTrim,
-        district: regDistrict,
-        state: regState,
-        dpdpConsent: true,
-      };
-
-      accounts.push(newAccount);
-      localStorage.setItem('grammitra_registered_users', JSON.stringify(accounts));
-
+      registerLocally(nameTrim, emailTrim, passTrim, panchayatTrim, citizenId);
+    } catch (err: any) {
       setIsLoading(false);
-      onShowToast('Account registered successfully under DPDP Act! Logging you in...', 'success');
+      setErrorMessage(err.message || 'Registration error occurred.');
+    }
+  };
 
-      const authUser: AuthUser = {
-        email: newAccount.email,
-        name: newAccount.name,
-        role: newAccount.role,
-        citizenId: newAccount.citizenId,
-        panchayat: newAccount.panchayat,
-        district: newAccount.district,
-        state: newAccount.state,
-        loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
+  const registerLocally = (
+    nameTrim: string,
+    emailTrim: string,
+    passTrim: string,
+    panchayatTrim: string,
+    citizenId: string
+  ) => {
+    const accounts = getStoredAccounts();
+    const existing = accounts.find((a) => a.email.toLowerCase() === emailTrim);
 
-      localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
-      onLoginSuccess(authUser);
-    }, 600);
+    if (existing) {
+      setIsLoading(false);
+      setErrorMessage(`An account with email "${emailTrim}" already exists. Please sign in.`);
+      onShowToast('Account already exists', 'warning');
+      return;
+    }
+
+    const newAccount: RegisteredUserAccount = {
+      email: emailTrim,
+      password: passTrim,
+      name: nameTrim,
+      role: regRole,
+      citizenId,
+      panchayat: panchayatTrim,
+      district: regDistrict,
+      state: regState,
+      dpdpConsent: true,
+    };
+
+    accounts.push(newAccount);
+    localStorage.setItem('grammitra_registered_users', JSON.stringify(accounts));
+
+    setIsLoading(false);
+    onShowToast('Account registered successfully under DPDP Act! Logging you in...', 'success');
+
+    const authUser: AuthUser = {
+      email: newAccount.email,
+      name: newAccount.name,
+      role: newAccount.role,
+      citizenId: newAccount.citizenId,
+      panchayat: newAccount.panchayat,
+      district: newAccount.district,
+      state: newAccount.state,
+      loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    localStorage.setItem('grammitra_auth_user', JSON.stringify(authUser));
+    onLoginSuccess(authUser);
   };
 
   return (
@@ -221,8 +327,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-linear-to-br from-emerald-600 to-green-800 text-white shadow-md mb-1">
             <span className="material-symbols-outlined text-4xl">storefront</span>
           </div>
-          <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-emerald-800 uppercase tracking-widest">
-            <span>GramMitra • DPDP Act Compliant Portal</span>
+          <div className="flex items-center justify-center gap-2 text-xs font-extrabold text-emerald-800 uppercase tracking-widest">
+            <span>GramMitra • Supabase & DPDP Act Enabled</span>
+            <span
+              onClick={() => setShowSupabaseModal(!showSupabaseModal)}
+              className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] cursor-pointer hover:bg-emerald-200 transition-colors"
+              title="Configure Supabase Connection"
+            >
+              {isSupabaseConfigured() ? '🟢 Supabase Connected' : '⚙️ Connect Supabase'}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
             {authMode === 'login' ? 'Sign In to Your Account' : 'Register New Village Account'}
@@ -233,6 +346,57 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               : 'Create a secure account for your village enterprise or shop in 1 minute.'}
           </p>
         </div>
+
+        {/* Supabase Config Banner / Modal */}
+        {showSupabaseModal && (
+          <div className="p-4 rounded-2xl bg-emerald-900 text-white shadow-lg space-y-3 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">database</span>
+                Configure Supabase Database & Auth
+              </span>
+              <button
+                onClick={() => setShowSupabaseModal(false)}
+                className="text-emerald-200 hover:text-white text-xs font-bold cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <p className="text-[11px] text-emerald-100 leading-relaxed">
+              Enter your Supabase Project URL and Anon API Key to connect live database storage and cloud authentication.
+            </p>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Supabase Project URL (e.g. https://xyz.supabase.co)"
+                value={sbUrlInput}
+                onChange={(e) => setSbUrlInput(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-emerald-950 border border-emerald-700 text-white text-xs font-mono focus:outline-none"
+              />
+              <input
+                type="password"
+                placeholder="Supabase Anon Key"
+                value={sbKeyInput}
+                onChange={(e) => setSbKeyInput(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-emerald-950 border border-emerald-700 text-white text-xs font-mono focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!sbUrlInput || !sbKeyInput) {
+                    onShowToast('Please enter both URL and Anon Key', 'warning');
+                    return;
+                  }
+                  updateSupabaseCredentials(sbUrlInput, sbKeyInput);
+                  onShowToast('Supabase credentials saved! Reloading...', 'success');
+                }}
+                className="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs cursor-pointer shadow"
+              >
+                Save & Connect Supabase
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="bg-stone-200/80 p-1.5 rounded-2xl grid grid-cols-2 gap-1 text-xs font-bold">

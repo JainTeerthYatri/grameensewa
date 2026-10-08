@@ -25,9 +25,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       badge: isHindi ? '📍 लाइव GPS व पिनकोड मैपिंग' : '📍 Real-Time GPS & Pincode Mapping',
       title: isHindi ? 'अपने गांव में सबसे अधिक चलने वाले बिजनेस की पहचान करें' : 'Discover High-Demand Businesses in Your Village',
       description: isHindi
-        ? 'सैटेलाइट मैप और 6-अंकों के पिनकोड के आधार पर जानें कि आपके क्षेत्र (डेयरी, सोलर कियोस्क, आटा चक्की, किराना) में किस उद्यम की सबसे ज्यादा मांग और शून्य प्रतिस्पर्धा है।'
-        : 'Using live satellite maps and 6-digit PIN codes, find out which rural business ventures (Dairy, Solar Kiosk, Flour Mill, Kirana) have maximum local demand and zero competition within a 10km radius.',
-      stats: '98.4% Demand Accuracy',
+        ? 'सैटेलाइट मैप और 6-अंकों के पिनकोड के आधार पर जानें कि आपके क्षेत्र (डेयरी, सोलर कियोस्क, आटा चक्की, किराना) में किस उद्यम की सबसे ज्यादा मांग है।'
+        : 'Using live satellite maps and 6-digit PIN codes, find out which rural business ventures (Dairy, Solar Kiosk, Flour Mill, Kirana) have maximum local demand within a 10km radius.',
+      stats: isHindi ? 'पिनकोड आधारित विश्लेषण' : 'PIN-Code Based Analysis',
       icon: 'explore',
       bgImage: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&q=80',
     },
@@ -36,8 +36,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       title: isHindi ? 'PMEGP 35% अनुदान और HDFC / SBI मुद्रा लोन' : 'Instant PMEGP Grants & HDFC / SBI Mudra Loans',
       description: isHindi
         ? 'PMEGP, PMFME और NABARD के तहत 35% तक की पूंजी सब्सिडी कैलकुलेट करें। HDFC, ICICI और SBI के साथ शून्य गारंटी (Collateral-Free) लोन तुलना करें।'
-        : 'Calculate capital subsidies up to 35% under PMEGP, PMFME, and NABARD. Compare live interest rates starting at 8.65% with zero collateral requirements up to ₹10 Lakh.',
-      stats: 'Up to ₹10 Lakh Collateral-Free',
+        : 'Calculate capital subsidies up to 35% under PMEGP, PMFME, and NABARD. Compare live interest rates with zero collateral requirements up to ₹10 Lakh.',
+      stats: isHindi ? '₹10 लाख तक शून्य गारंटी' : 'Up to ₹10 Lakh Collateral-Free',
       icon: 'account_balance',
       bgImage: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80',
     },
@@ -47,7 +47,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       description: isHindi
         ? 'दैनिक ग्राहक उधारी, नकद बिक्री और सप्लायर भुगतान को एक सुरक्षित डिजिटल बही-खाते में रखें। एक क्लिक में WhatsApp पर तकादा और रसीद भेजें।'
         : 'Keep track of daily customer credit, cash collections, and supplier payments in one secure place. Send instant payment reminders via WhatsApp with automated digital ledgers.',
-      stats: '₹120Cr+ Transactions Managed',
+      stats: isHindi ? 'सुरक्षित डिजिटल बही-खाता' : 'Secure Digital Ledger',
       icon: 'menu_book',
       bgImage: 'https://images.unsplash.com/photo-1556742049-0a67d553c299?auto=format&fit=crop&w=1200&q=80',
     },
@@ -317,23 +317,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
 
-        {/* Live Impact Statistics Banner */}
+        {/* Real Platform & Scheme Facts Banner */}
         <div className="bg-stone-900 text-white rounded-3xl p-8 sm:p-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center shadow-xl">
           <div>
-            <div className="text-2xl sm:text-4xl font-black text-emerald-400">42,910+</div>
-            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'जुड़े हुए गांव' : 'Villages Connected'}</div>
+            <div className="text-2xl sm:text-4xl font-black text-emerald-400">12</div>
+            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'भारतीय भाषाएं समर्थित' : 'Supported Indian Languages'}</div>
           </div>
           <div>
             <div className="text-2xl sm:text-4xl font-black text-amber-300">35%</div>
-            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'अधिकतम सब्सिडी' : 'Max Capital Subsidy'}</div>
+            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'PMEGP अधिकतम सब्सिडी' : 'PMEGP Max Capital Subsidy'}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-4xl font-black text-emerald-400">98%</div>
-            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'सफल ऋण आवेदन' : 'Loan Approval Rate'}</div>
+            <div className="text-2xl sm:text-4xl font-black text-emerald-400">₹10 Lakh</div>
+            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'शून्य गारंटी मुद्रा लोन' : 'Collateral-Free Mudra Limit'}</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-4xl font-black text-amber-300">₹120Cr+</div>
-            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'सुरक्षित लेन-देन' : 'Credit Managed'}</div>
+            <div className="text-2xl sm:text-4xl font-black text-amber-300">100%</div>
+            <div className="text-xs text-stone-400 mt-1">{isHindi ? 'DPDP Act व SSL सुरक्षित' : 'DPDP Act & SSL Secure'}</div>
           </div>
         </div>
       </main>

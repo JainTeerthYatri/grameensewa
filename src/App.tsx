@@ -58,9 +58,9 @@ export function App() {
   const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(() => {
     try {
       const saved = localStorage.getItem('grammitra_lang');
-      return (saved as SupportedLanguage) || 'hi';
+      return (saved as SupportedLanguage) || 'en';
     } catch {
-      return 'hi';
+      return 'en';
     }
   });
 
