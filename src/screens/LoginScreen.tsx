@@ -32,9 +32,9 @@ const INITIAL_ACCOUNTS: RegisteredUserAccount[] = [
     dpdpConsent: true,
   },
   {
-    email: 'laluaj677@gmail.com',
+    email: 'xyz@grammitra.in',
     password: 'GramMitra@2026',
-    name: 'Lalu Aj',
+    name: 'XYZ User',
     role: 'Panchayat Enterprise Promoter',
     citizenId: 'GM-2026-UP-7720',
     panchayat: 'Rampur Kalan',
